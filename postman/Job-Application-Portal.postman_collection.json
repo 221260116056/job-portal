@@ -1,0 +1,27 @@
+{
+  "info": {
+    "_postman_id": "e4b9dcab-98dd-4c12-a7d4-66ccfe201d10",
+    "name": "Job Application Portal API",
+    "description": "Requests for the Job Application Portal API. Login stores token; requests save returned IDs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "token", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "applicationId", "value": "" }
+  ],
+  "item": [
+    { "name": "Health Check", "request": { "method": "GET", "url": "{{baseUrl}}/api/health" } },
+    { "name": "Register", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Vraj Vekariya\",\n  \"email\": \"vraj@example.com\",\n  \"password\": \"Password@123\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/register" } },
+    { "name": "Login", "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.success && json.data.token) pm.collectionVariables.set('token', json.data.token);"] } }], "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"vraj@example.com\",\n  \"password\": \"Password@123\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" } },
+    { "name": "Get Current User", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/users/me" } },
+    { "name": "Upload Resume", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "resume", "type": "file", "src": "" }] }, "url": "{{baseUrl}}/api/users/resume" } },
+    { "name": "Get All Jobs", "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.success && json.data.length) pm.collectionVariables.set('jobId', json.data[0].id);"] } }], "request": { "method": "GET", "url": "{{baseUrl}}/api/jobs?page=1&limit=10" } },
+    { "name": "Get Job By ID", "request": { "method": "GET", "url": "{{baseUrl}}/api/jobs/{{jobId}}" } },
+    { "name": "Create Job", "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.success && json.data.id) pm.collectionVariables.set('jobId', json.data.id);"] } }], "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Backend Developer Intern\",\n  \"company\": \"ABC Technologies\",\n  \"description\": \"Work with Node.js APIs and PostgreSQL.\",\n  \"location\": \"Ahmedabad\",\n  \"employment_type\": \"Internship\",\n  \"skills\": \"Node.js, Express.js, PostgreSQL\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/jobs" } },
+    { "name": "Apply For Job", "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.success && json.data.id) pm.collectionVariables.set('applicationId', json.data.id);"] } }], "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"job_id\": \"{{jobId}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/applications" } },
+    { "name": "Get My Applications", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/applications" } },
+    { "name": "Get Application By ID", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/applications/{{applicationId}}" } }
+  ]
+}
