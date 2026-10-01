@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Application Portal</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">💼 Job Portal</div>
+    <nav class="nav">
+      <button data-view="jobs" class="nav-btn active">Jobs</button>
+      <button data-view="applications" class="nav-btn">My Applications</button>
+      <button data-view="profile" class="nav-btn">Profile</button>
+    </nav>
+    <div class="auth-area">
+      <span id="userBadge" class="user-badge hidden"></span>
+      <button id="logoutBtn" class="btn btn-ghost hidden">Logout</button>
+      <button id="loginNavBtn" class="btn btn-primary">Login / Register</button>
+    </div>
+  </header>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <main class="container">
+    <!-- Auth : single joint card with tabs -->
+    <section id="view-auth" class="view">
+      <div class="card auth-card">
+        <div class="auth-tabs">
+          <button id="tabLogin" class="auth-tab active" type="button">Login</button>
+          <button id="tabRegister" class="auth-tab" type="button">Sign up</button>
+        </div>
+        <form id="loginForm" class="auth-form">
+          <h2>Welcome back</h2>
+          <label>Email<input type="email" id="loginEmail" required placeholder="vraj@example.com" /></label>
+          <label>Password<input type="password" id="loginPassword" required placeholder="Password@123" /></label>
+          <button class="btn btn-primary" type="submit">Login</button>
+          <p class="muted switch-line">New here? <a href="#" id="gotoRegister">Create an account</a></p>
+        </form>
+        <form id="registerForm" class="auth-form hidden">
+          <h2>Create account</h2>
+          <label>Name<input type="text" id="regName" required placeholder="Vraj Vekariya" /></label>
+          <label>Email<input type="email" id="regEmail" required placeholder="vraj@example.com" /></label>
+          <label>Password<input type="password" id="regPassword" required minlength="6" placeholder="Min 6 characters" /></label>
+          <button class="btn btn-secondary" type="submit">Sign up</button>
+          <p class="muted switch-line">Already have an account? <a href="#" id="gotoLogin">Login</a></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Jobs -->
+    <section id="view-jobs" class="view active">
+      <div id="matchBanner" class="card match-banner hidden">
+        <h3>✨ Recommended for you <span id="matchSkills" class="muted"></span></h3>
+        <div id="matchedGrid" class="jobs-grid"></div>
+      </div>
+      <div class="toolbar">
+        <input id="jobSearch" type="search" placeholder="Search title, company, location..." />
+        <button id="refreshJobs" class="btn">Refresh</button>
+        <button id="seedHintBtn" class="btn btn-ghost" title="Run npm run seed on server to load samples">Need samples? npm run seed</button>
+      </div>
+      <div id="jobsGrid" class="jobs-grid"></div>
+      <div class="pagination">
+        <button id="prevPage" class="btn btn-ghost">← Prev</button>
+        <span id="pageInfo"></span>
+        <button id="nextPage" class="btn btn-ghost">Next →</button>
+      </div>
+      <div class="card">
+        <h3>Add a job (demo — public endpoint)</h3>
+        <form id="jobForm" class="grid-2">
+          <label>Title<input id="jobTitle" required /></label>
+          <label>Company<input id="jobCompany" required /></label>
+          <label>Location<input id="jobLocation" required /></label>
+          <label>Type<input id="jobType" required placeholder="Internship / Full-time" /></label>
+          <label class="span-2">Description<textarea id="jobDesc" required rows="2"></textarea></label>
+          <label class="span-2">Skills<input id="jobSkills" placeholder="Node.js, Express.js" /></label>
+          <button class="btn btn-secondary span-2" type="submit">Post job</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Applications -->
+    <section id="view-applications" class="view">
+      <div class="card">
+        <h2>My Applications</h2>
+        <p class="muted">Login required. Shows only your applications.</p>
+        <div id="appsList"></div>
+      </div>
+    </section>
+
+    <!-- Profile -->
+    <section id="view-profile" class="view">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Profile</h2>
+          <div id="profileBox">Login to view profile.</div>
+        </div>
+        <div class="card">
+          <h2>Resume</h2>
+          <p class="muted">PDF / DOC / DOCX, max 5 MB.</p>
+          <form id="resumeForm">
+            <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
+            <button class="btn btn-primary" type="submit">Upload resume</button>
+          </form>
+          <div id="resumeLink"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="jobModal" class="modal hidden">
+    <div class="modal-card">
+      <button id="modalClose" class="btn btn-ghost">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <footer class="footer">Job Application Portal API • <a href="/api/health" target="_blank">health</a> • <a href="/api/docs" target="_blank">docs</a></footer>
+  <script src="/app.js"></script>
+</body>
+</html>

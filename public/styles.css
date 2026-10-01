@@ -1,0 +1,42 @@
+:root { --bg:#0f172a; --card:#1e293b; --line:#334155; --text:#e2e8f0; --muted:#94a3b8; --acc:#38bdf8; --acc2:#a78bfa; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: system-ui, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
+a { color: var(--acc); }
+.topbar { display:flex; align-items:center; gap:1rem; padding:.8rem 1.2rem; background:#020617; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10; flex-wrap:wrap; }
+.brand { font-weight:800; font-size:1.2rem; }
+.nav { display:flex; gap:.5rem; }
+.nav-btn { background:transparent; border:1px solid transparent; color:var(--text); padding:.5rem .9rem; border-radius:8px; cursor:pointer; }
+.nav-btn.active, .nav-btn:hover { border-color:var(--line); background:var(--card); }
+.auth-area { margin-left:auto; display:flex; gap:.6rem; align-items:center; }
+.user-badge { background:var(--card); border:1px solid var(--line); padding:.4rem .7rem; border-radius:20px; font-size:.85rem; }
+.container { max-width:1100px; margin:0 auto; padding:1.2rem; }
+.view { display:none; } .view.active { display:block; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1rem 1.2rem; margin-bottom:1rem; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; } .span-2 { grid-column: span 2; }
+label { display:flex; flex-direction:column; gap:.35rem; margin-bottom:.7rem; font-size:.9rem; }
+input, textarea { background:#0f172a; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:.6rem .7rem; font-size:1rem; }
+.btn { border:1px solid var(--line); background:#0f172a; color:var(--text); padding:.55rem .9rem; border-radius:8px; cursor:pointer; }
+.btn-primary { background:var(--acc); border-color:var(--acc); color:#02131f; font-weight:700; }
+.btn-secondary { background:var(--acc2); border-color:var(--acc2); color:#1b1033; font-weight:700; }
+.btn-ghost { background:transparent; }
+.toolbar { display:flex; gap:.6rem; margin-bottom:1rem; flex-wrap:wrap; } .toolbar input { flex:1; min-width:220px; }
+.jobs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
+.job-card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1rem; display:flex; flex-direction:column; gap:.5rem; }
+.job-card h3 { margin:.2rem 0; } .muted { color:var(--muted); } .pill { display:inline-block; border:1px solid var(--line); border-radius:20px; padding:.15rem .6rem; font-size:.8rem; color:var(--muted); }
+.job-actions { display:flex; gap:.5rem; margin-top:.5rem; }
+.pagination { display:flex; align-items:center; justify-content:center; gap:1rem; margin:1rem 0; }
+.toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#020617; border:1px solid var(--acc); padding:.7rem 1.2rem; border-radius:10px; z-index:50; }
+.hidden { display:none !important; }
+.modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:1rem; z-index:40; }
+.modal-card { background:var(--card); border:1px solid var(--line); border-radius:12px; max-width:600px; width:100%; padding:1.2rem; max-height:85vh; overflow:auto; }
+.footer { text-align:center; padding:1.5rem; color:var(--muted); }
+.auth-card { max-width:480px; margin:0 auto; }
+.auth-tabs { display:flex; gap:.5rem; background:#0f172a; border:1px solid var(--line); border-radius:10px; padding:.3rem; margin-bottom:1rem; }
+.auth-tab { flex:1; background:transparent; border:0; color:var(--muted); padding:.6rem; border-radius:8px; cursor:pointer; font-size:1rem; font-weight:700; }
+.auth-tab.active { background:var(--card); color:var(--text); border:1px solid var(--line); }
+.auth-form h2 { margin-top:0; }
+.switch-line { margin-top:.8rem; }
+.match-banner { border-color: var(--acc2); background: linear-gradient(180deg, #241d4d, var(--card)); }
+.skill-tag { display:inline-block; background:#0f172a; border:1px solid var(--acc); color:var(--acc); border-radius:20px; padding:.15rem .6rem; font-size:.8rem; margin:.15rem .2rem; }
+.match-badge { display:inline-block; background:var(--acc2); color:#1b1033; font-weight:800; border-radius:20px; padding:.15rem .6rem; font-size:.8rem; }
+@media (max-width:700px){ .grid-2{grid-template-columns:1fr;} .span-2{grid-column:span 1;} }

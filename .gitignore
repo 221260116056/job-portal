@@ -4,3 +4,11 @@ uploads/resumes/*
 !uploads/resumes/.gitkeep
 npm-debug.log
 .DS_Store
+.postman/
+postman/collections/
+postman/documents/
+postman/environments/
+postman/flows/
+postman/globals/
+postman/mocks/
+postman/specs/

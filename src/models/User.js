@@ -6,7 +6,9 @@ const User = sequelize.define('User', {
   name: { type: DataTypes.STRING(120), allowNull: false },
   email: { type: DataTypes.STRING(255), allowNull: false, unique: true, validate: { isEmail: true } },
   password: { type: DataTypes.STRING, allowNull: false },
-  resume_url: { type: DataTypes.STRING(500), allowNull: true }
+  resume_url: { type: DataTypes.STRING(500), allowNull: true },
+  resume_skills: { type: DataTypes.TEXT, allowNull: true, comment: 'JSON array of skills extracted from resume' },
+  resume_text: { type: DataTypes.TEXT, allowNull: true }
 }, { tableName: 'users', underscored: true, defaultScope: { attributes: { exclude: ['password'] } } });
 
 module.exports = User;

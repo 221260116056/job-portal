@@ -7,7 +7,7 @@ async function start() {
   try {
     if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is required');
     await sequelize.authenticate();
-    await sequelize.sync();
+    await sequelize.sync({ alter: true });
     app.listen(port, () => console.log(`Job Application Portal API listening on port ${port}`));
   } catch (error) {
     console.error('Unable to start API:', error.message);
