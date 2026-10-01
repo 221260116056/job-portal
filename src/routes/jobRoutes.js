@@ -1,10 +1,10 @@
 const router = require('express').Router();
-const { body } = require('express-validator');
-const auth = require('../middleware/authMiddleware');
 const controller = require('../controllers/jobController');
-const validate = require('../middleware/validationMiddleware');
+const { requireCandidate } = require('../middleware/authMiddleware');
+
+// Public: browse jobs. Job creation is company-only (POST /api/company/jobs).
 router.get('/', controller.list);
-router.get('/matched', auth, controller.matched);
+router.get('/recommended', requireCandidate, controller.recommended);
+router.get('/matched', requireCandidate, controller.matched);
 router.get('/:id', controller.get);
-router.post('/', [body('title').trim().notEmpty(), body('company').trim().notEmpty(), body('description').trim().notEmpty(), body('location').trim().notEmpty(), body('employment_type').trim().notEmpty()], validate, controller.create);
 module.exports = router;

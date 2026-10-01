@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const { body, param } = require('express-validator');
-const auth = require('../middleware/authMiddleware');
+const { requireCandidate } = require('../middleware/authMiddleware');
 const validate = require('../middleware/validationMiddleware');
 const controller = require('../controllers/applicationController');
-router.use(auth);
+router.use(requireCandidate);
 router.post('/', [body('job_id').isUUID().withMessage('job_id must be a valid job UUID')], validate, controller.create);
 router.get('/', controller.list);
 router.get('/:id', [param('id').isUUID().withMessage('Application ID must be a valid UUID')], validate, controller.get);

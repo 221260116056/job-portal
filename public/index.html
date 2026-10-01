@@ -3,62 +3,76 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Job Application Portal</title>
+  <title>HireFlow - Job Portal</title>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="/assets/image/hireflow-logo.svg" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">💼 Job Portal</div>
-    <nav class="nav">
-      <button data-view="jobs" class="nav-btn active">Jobs</button>
-      <button data-view="applications" class="nav-btn">My Applications</button>
-      <button data-view="profile" class="nav-btn">Profile</button>
-    </nav>
+    <div class="brand"><a href="#/jobs" class="brand-logo" aria-label="HireFlow home"><svg viewBox="10 6 338 82" width="175" height="52" role="img" aria-label="HireFlow - Your Career. In Flow."><title>HireFlow</title><defs><linearGradient id="nfIcon" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="30%" stop-color="#38BDF8"/><stop offset="55%" stop-color="#3B82F6"/><stop offset="78%" stop-color="#6366F1"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient><linearGradient id="nfFlow" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="50%" stop-color="#3B82F6"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient><linearGradient id="nfShine" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient></defs><g transform="translate(10 9) scale(0.22)"><path d="M75 15 C53 15 35 33 35 55 L35 168 L125 168 L125 105 L35 105 L35 55 C35 33 53 15 75 15 Z" fill="url(#nfIcon)"/><path d="M35 225 L35 335 C35 358 53 376 75 376 C91 376 106 367 115 354 L169 280 L169 207 L115 207 L115 246 L75 305 L75 225 Z" fill="url(#nfIcon)"/><path d="M145 72 L145 122 L250 122 L250 75 L382 175 L250 275 L250 228 L145 228 L145 279 L105 279 L105 72 Z" fill="url(#nfIcon)"/><path d="M30 205 C78 160 121 153 164 165 C205 177 231 196 278 190 C313 186 335 171 354 158 C326 192 296 214 260 221 C213 231 181 207 142 194 C103 181 70 187 30 226 Z" fill="url(#nfShine)"/></g><text x="106" y="58" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" letter-spacing="-1"><tspan fill="#F8FAFC">Hire</tspan><tspan fill="url(#nfFlow)">Flow</tspan></text><text x="108" y="80" font-family="Arial, Helvetica, sans-serif" font-size="12" letter-spacing="3" fill="#CBD5E1">YOUR CAREER. IN FLOW.</text></svg></a></div>
+    <nav class="nav" id="mainNav"></nav>
     <div class="auth-area">
       <span id="userBadge" class="user-badge hidden"></span>
+      <div id="authDropdown" class="dropdown hidden">
+        <button id="authDropBtn" class="btn btn-primary" aria-haspopup="true" aria-expanded="false">Login / Register ▾</button>
+        <div id="authMenu" class="dropdown-menu hidden" role="menu">
+          <div class="dropdown-label">Candidate</div>
+          <a href="#/login" role="menuitem">Login</a>
+          <a href="#/register" role="menuitem">Register</a>
+          <div class="dropdown-sep"></div>
+          <div class="dropdown-label">Company</div>
+          <a href="#/company/login" role="menuitem">Company Login</a>
+          <a href="#/company/register" role="menuitem">Company Register</a>
+        </div>
+      </div>
+      <a id="profileBtn" href="#/profile" class="btn hidden">Profile</a>
+      <a id="dashBtn" href="#/company/dashboard" class="btn btn-secondary hidden">Dashboard</a>
       <button id="logoutBtn" class="btn btn-ghost hidden">Logout</button>
-      <button id="loginNavBtn" class="btn btn-primary">Login / Register</button>
     </div>
+    <button id="menuBtn" class="menu-btn" aria-label="Open menu" aria-expanded="false">☰</button>
   </header>
+  <div id="mobileMenu" class="mobile-menu hidden"></div>
 
   <div id="toast" class="toast hidden"></div>
 
   <main class="container">
-    <!-- Auth : single joint card with tabs -->
-    <section id="view-auth" class="view">
-      <div class="card auth-card">
-        <div class="auth-tabs">
-          <button id="tabLogin" class="auth-tab active" type="button">Login</button>
-          <button id="tabRegister" class="auth-tab" type="button">Sign up</button>
+    <!-- Candidate dashboard -->
+    <section id="view-dashboard" class="view">
+      <h2 id="dashHello">Candidate Dashboard</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Resume</h3>
+          <form id="dashResumeForm">
+            <input type="file" id="dashResumeFile" accept=".pdf,.doc,.docx" required />
+            <button class="btn btn-primary" type="submit">Upload Resume</button>
+          </form>
+          <div id="dashResumeLink"></div>
+          <p class="muted">Uploading a new resume replaces skills and recommendations instantly.</p>
         </div>
-        <form id="loginForm" class="auth-form">
-          <h2>Welcome back</h2>
-          <label>Email<input type="email" id="loginEmail" required placeholder="vraj@example.com" /></label>
-          <label>Password<input type="password" id="loginPassword" required placeholder="Password@123" /></label>
-          <button class="btn btn-primary" type="submit">Login</button>
-          <p class="muted switch-line">New here? <a href="#" id="gotoRegister">Create an account</a></p>
-        </form>
-        <form id="registerForm" class="auth-form hidden">
-          <h2>Create account</h2>
-          <label>Name<input type="text" id="regName" required placeholder="Vraj Vekariya" /></label>
-          <label>Email<input type="email" id="regEmail" required placeholder="vraj@example.com" /></label>
-          <label>Password<input type="password" id="regPassword" required minlength="6" placeholder="Min 6 characters" /></label>
-          <button class="btn btn-secondary" type="submit">Sign up</button>
-          <p class="muted switch-line">Already have an account? <a href="#" id="gotoLogin">Login</a></p>
-        </form>
+        <div class="card">
+          <h3>Detected Skills</h3>
+          <div id="dashSkills"></div>
+        </div>
       </div>
+      <h3>Recommended Jobs <span class="muted">— Based on your resume</span></h3>
+      <div id="dashJobsInfo"></div>
+      <div id="dashJobs" class="jobs-grid"></div>
     </section>
 
-    <!-- Jobs -->
-    <section id="view-jobs" class="view active">
+    <!-- Public: job listings (candidates only see + apply; NO job creation here) -->
+    <section id="view-jobs" class="view">
+      <h2>Available Jobs</h2>
       <div id="matchBanner" class="card match-banner hidden">
-        <h3>✨ Recommended for you <span id="matchSkills" class="muted"></span></h3>
+        <h3>Recommended for You <span id="matchSkills" class="muted"></span></h3>
         <div id="matchedGrid" class="jobs-grid"></div>
       </div>
+      <div id="noResumeBanner" class="card hidden">
+        <p>Upload your resume to get personalized job recommendations. <a href="#/dashboard">Upload Resume</a></p>
+      </div>
+      <h3>All Jobs</h3>
       <div class="toolbar">
         <input id="jobSearch" type="search" placeholder="Search title, company, location..." />
         <button id="refreshJobs" class="btn">Refresh</button>
-        <button id="seedHintBtn" class="btn btn-ghost" title="Run npm run seed on server to load samples">Need samples? npm run seed</button>
       </div>
       <div id="jobsGrid" class="jobs-grid"></div>
       <div class="pagination">
@@ -66,30 +80,45 @@
         <span id="pageInfo"></span>
         <button id="nextPage" class="btn btn-ghost">Next →</button>
       </div>
-      <div class="card">
-        <h3>Add a job (demo — public endpoint)</h3>
-        <form id="jobForm" class="grid-2">
-          <label>Title<input id="jobTitle" required /></label>
-          <label>Company<input id="jobCompany" required /></label>
-          <label>Location<input id="jobLocation" required /></label>
-          <label>Type<input id="jobType" required placeholder="Internship / Full-time" /></label>
-          <label class="span-2">Description<textarea id="jobDesc" required rows="2"></textarea></label>
-          <label class="span-2">Skills<input id="jobSkills" placeholder="Node.js, Express.js" /></label>
-          <button class="btn btn-secondary span-2" type="submit">Post job</button>
+    </section>
+
+    <!-- Candidate auth -->
+    <section id="view-login" class="view">
+      <div class="card auth-card">
+        <h2>Candidate Login</h2>
+        <form id="loginForm">
+          <label>Email<input type="email" id="loginEmail" required placeholder="vraj@example.com" /></label>
+          <label>Password<input type="password" id="loginPassword" required placeholder="Password@123" /></label>
+          <button class="btn btn-primary" type="submit">Login</button>
+          <p class="muted switch-line">New here? <a href="#/register">Create an account</a> · <a href="#/company/login">Company login</a></p>
         </form>
       </div>
     </section>
 
-    <!-- Applications -->
-    <section id="view-applications" class="view">
+    <section id="view-register" class="view">
+      <div class="card auth-card">
+        <h2>Create Account</h2>
+        <form id="registerForm">
+          <label>Full Name<input type="text" id="regName" required placeholder="Vraj Vekariya" /></label>
+          <label>Email<input type="email" id="regEmail" required placeholder="vraj@example.com" /></label>
+          <label>Password<input type="password" id="regPassword" required minlength="6" placeholder="Min 6 characters" /></label>
+          <label>Confirm Password<input type="password" id="regConfirm" required minlength="6" placeholder="Repeat password" /></label>
+          <button class="btn btn-secondary" type="submit">Create Account</button>
+          <p class="muted switch-line">Already have an account? <a href="#/login">Login</a></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Candidate: applications -->
+    <section id="view-my-applications" class="view">
       <div class="card">
         <h2>My Applications</h2>
-        <p class="muted">Login required. Shows only your applications.</p>
+        <p class="muted">Track your application status.</p>
         <div id="appsList"></div>
       </div>
     </section>
 
-    <!-- Profile -->
+    <!-- Candidate: profile -->
     <section id="view-profile" class="view">
       <div class="grid-2">
         <div class="card">
@@ -98,7 +127,7 @@
         </div>
         <div class="card">
           <h2>Resume</h2>
-          <p class="muted">PDF / DOC / DOCX, max 5 MB.</p>
+          <p class="muted">PDF / DOCX best, DOC best-effort, max 5 MB. Uploading refreshes your skill-matched jobs.</p>
           <form id="resumeForm">
             <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
             <button class="btn btn-primary" type="submit">Upload resume</button>
@@ -106,6 +135,88 @@
           <div id="resumeLink"></div>
         </div>
       </div>
+    </section>
+
+    <!-- Company auth -->
+    <section id="view-company-login" class="view">
+      <div class="card auth-card">
+        <h2>Company Login</h2>
+        <form id="companyLoginForm">
+          <label>Company Email<input type="email" id="coLoginEmail" required placeholder="hr@company.com" /></label>
+          <label>Password<input type="password" id="coLoginPassword" required /></label>
+          <button class="btn btn-primary" type="submit">Company Login</button>
+          <p class="muted switch-line">New company? <a href="#/company/register">Register company</a> · <a href="#/login">Candidate login</a></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="view-company-register" class="view">
+      <div class="card auth-card">
+        <h2>Register Company</h2>
+        <form id="companyRegisterForm">
+          <label>Company Name<input type="text" id="coRegName" required placeholder="ABC Technologies" /></label>
+          <label>Company Email<input type="email" id="coRegEmail" required placeholder="hr@company.com" /></label>
+          <label>Password<input type="password" id="coRegPassword" required minlength="6" /></label>
+          <label>Confirm Password<input type="password" id="coRegConfirm" required minlength="6" /></label>
+          <label>Company Location<input type="text" id="coRegLocation" required placeholder="Ahmedabad" /></label>
+          <label>Company Website (optional)<input type="url" id="coRegWebsite" placeholder="https://example.com" /></label>
+          <button class="btn btn-secondary" type="submit">Register Company</button>
+          <p class="muted switch-line">Already registered? <a href="#/company/login">Company login</a></p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Company: dashboard -->
+    <section id="view-company-dashboard" class="view">
+      <h2>Company Dashboard</h2>
+      <p class="muted" id="dashWelcome"></p>
+      <div class="stats">
+        <div class="card stat"><div class="stat-num" id="statJobs">0</div><div class="muted">Jobs Posted</div></div>
+        <div class="card stat"><div class="stat-num" id="statApps">0</div><div class="muted">Applications</div></div>
+      </div>
+      <div class="toolbar">
+        <h3>My Jobs</h3>
+        <span class="spacer"></span>
+        <a class="btn btn-secondary" href="#/company/jobs/create">+ Add New Job</a>
+        <a class="btn" href="#/company/applications">View Applications</a>
+      </div>
+      <div id="dashJobs"></div>
+    </section>
+
+    <!-- Company: my jobs -->
+    <section id="view-company-jobs" class="view">
+      <div class="toolbar">
+        <h2>My Jobs</h2>
+        <span class="spacer"></span>
+        <a class="btn btn-secondary" href="#/company/jobs/create">+ Add New Job</a>
+      </div>
+      <div id="companyJobsList"></div>
+    </section>
+
+    <!-- Company: create / edit job -->
+    <section id="view-company-job-form" class="view">
+      <div class="card auth-card wide">
+        <h2 id="jobFormTitle">Post a Job</h2>
+        <p class="muted">Posting as <b id="jobFormCompany"></b> — taken from your login, not from this form.</p>
+        <form id="companyJobForm">
+          <label>Job Title<input id="cjTitle" required /></label>
+          <label>Location<input id="cjLocation" required /></label>
+          <label>Employment Type<input id="cjType" required placeholder="Internship / Full-time" /></label>
+          <label>Description<textarea id="cjDesc" required rows="3"></textarea></label>
+          <label>Skills (required, comma separated)<input id="cjSkills" required placeholder="Node.js, Express.js, PostgreSQL" /></label>
+          <button class="btn btn-secondary" type="submit">Post Job</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Company: applications -->
+    <section id="view-company-applications" class="view">
+      <h2>Applications</h2>
+      <div class="toolbar">
+        <select id="appJobFilter"><option value="">All jobs</option></select>
+        <select id="appStatusFilter"><option value="">All statuses</option><option>Applied</option><option>Under Review</option><option>Shortlisted</option><option>Rejected</option></select>
+      </div>
+      <div id="companyAppsList"></div>
     </section>
   </main>
 
@@ -116,7 +227,34 @@
     </div>
   </div>
 
-  <footer class="footer">Job Application Portal API • <a href="/api/health" target="_blank">health</a> • <a href="/api/docs" target="_blank">docs</a></footer>
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <strong>HireFlow</strong>
+        <p class="muted">Your Career. In Flow.<br />Find internships, apply in one click, and track every application.</p>
+      </div>
+      <div class="footer-col">
+        <strong>Candidate</strong>
+        <a href="#/jobs">Browse Jobs</a>
+        <a href="#/login">Login</a>
+        <a href="#/register">Register</a>
+        <a href="#/my-applications">My Applications</a>
+      </div>
+      <div class="footer-col">
+        <strong>Company</strong>
+        <a href="#/company/login">Company Login</a>
+        <a href="#/company/register">Company Register</a>
+        <a href="#/company/dashboard">Dashboard</a>
+        <a href="#/company/jobs/create">Post a Job</a>
+      </div>
+      <div class="footer-col">
+        <strong>API</strong>
+        <a href="/api/health" target="_blank">Health</a>
+        <a href="/api/docs" target="_blank">Docs</a>
+      </div>
+    </div>
+    <div class="footer-bottom muted">© 2026 HireFlow • Your Career. In Flow.</div>
+  </footer>
   <script src="/app.js"></script>
 </body>
 </html>

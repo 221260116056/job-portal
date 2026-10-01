@@ -1,5 +1,8 @@
 require('dotenv').config();
-const { sequelize, Job } = require('../models');
+const bcrypt = require('bcryptjs');
+const { sequelize, Job, Company } = require('../models');
+
+const DEMO_COMPANY = { company_name: 'ABC Technologies', email: 'company@example.com', password: 'Password@123', location: 'Ahmedabad', website: 'https://example.com' };
 
 const jobs = [
   { title: 'Node.js Developer Intern', company: 'Potenz Technology', description: 'Build and maintain backend APIs with mentorship from senior engineers. Contribute to code reviews, testing, and production features.', location: 'Ahmedabad', employment_type: 'Internship', skills: 'Node.js, Express.js, PostgreSQL' },
@@ -10,7 +13,21 @@ const jobs = [
 ];
 
 (async () => {
-  try { await sequelize.authenticate(); await sequelize.sync(); for (const job of jobs) await Job.findOrCreate({ where: { title: job.title, company: job.company }, defaults: job }); console.log('Sample jobs are ready.'); }
+  try {
+    await sequelize.authenticate();
+    await sequelize.sync({ alter: true });
+    const [demo] = await Company.findOrCreate({
+      where: { email: DEMO_COMPANY.email },
+      defaults: { ...DEMO_COMPANY, password: await bcrypt.hash(DEMO_COMPANY.password, 12) },
+    });
+    for (const job of jobs) {
+      const [row, created] = await Job.findOrCreate({ where: { title: job.title, company: job.company }, defaults: job });
+      // Attach legacy seeded jobs to the demo company so company flows are testable.
+      if (!row.company_id) await row.update({ company_id: demo.id });
+      void created;
+    }
+    console.log('Sample jobs are ready. Demo company: company@example.com / Password@123');
+  }
   catch (error) { console.error('Unable to seed jobs:', error.message); process.exitCode = 1; }
   finally { await sequelize.close(); }
 })();

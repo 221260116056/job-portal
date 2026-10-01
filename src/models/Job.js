@@ -3,6 +3,7 @@ const sequelize = require('../config/database');
 
 module.exports = sequelize.define('Job', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  company_id: { type: DataTypes.UUID, allowNull: true },
   title: { type: DataTypes.STRING(180), allowNull: false },
   company: { type: DataTypes.STRING(180), allowNull: false },
   description: { type: DataTypes.TEXT, allowNull: false },

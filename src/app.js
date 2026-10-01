@@ -8,6 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const jobRoutes = require('./routes/jobRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
+const companyRoutes = require('./routes/companyRoutes');
 const errorMiddleware = require('./middleware/errorMiddleware');
 
 const app = express();
@@ -21,12 +22,17 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads'), { dotfiles: 'deny', index: false }));
 app.use(express.static(path.resolve(process.cwd(), 'public')));
 app.get('/api', (req, res) => res.json({ success: true, message: 'Job Application Portal API', version: '1.0.0' }));
-app.get('/api/docs', (req, res) => res.json({ success: true, message: 'See README.md and postman collection', endpoints: ['POST /api/auth/register', 'POST /api/auth/login', 'GET /api/users/me', 'POST /api/users/resume', 'GET /api/jobs', 'GET /api/jobs/matched (auth: skill-ranked recommendations)', 'GET /api/jobs/:id', 'POST /api/jobs', 'POST /api/applications', 'GET /api/applications', 'GET /api/applications/:id'] }));
+app.get('/api/docs', (req, res) => res.json({ success: true, message: 'See README.md and postman collection', endpoints: ['POST /api/auth/register', 'POST /api/auth/login', 'GET /api/users/me', 'GET /api/users/skills (candidate)', 'POST /api/users/resume', 'GET /api/jobs', 'GET /api/jobs/recommended (candidate)', 'GET /api/jobs/matched (candidate, alias)', 'GET /api/jobs/:id', 'POST /api/applications (candidate)', 'GET /api/applications (candidate)', 'GET /api/applications/:id (candidate)', 'POST /api/company/auth/register', 'POST /api/company/auth/login', 'GET /api/company/me', 'GET /api/company/jobs', 'POST /api/company/jobs', 'GET /api/company/jobs/:id', 'PUT /api/company/jobs/:id', 'DELETE /api/company/jobs/:id', 'GET /api/company/applications', 'PUT /api/company/applications/:id/status'] }));
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'API is running' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
+app.use('/api/company', companyRoutes);
+// Frontend deep routes serve the SPA (hash router renders the right view).
+const frontendEntry = path.resolve(process.cwd(), 'public', 'index.html');
+app.get(['/login', '/register', '/jobs', '/my-applications', '/profile'], (req, res) => res.sendFile(frontendEntry));
+app.get('/company/*', (req, res) => res.sendFile(frontendEntry));
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 app.use(errorMiddleware);
 module.exports = app;

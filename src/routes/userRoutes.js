@@ -1,7 +1,8 @@
 const router = require('express').Router();
-const auth = require('../middleware/authMiddleware');
+const { requireCandidate } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 const controller = require('../controllers/userController');
-router.get('/me', auth, controller.me);
-router.post('/resume', auth, upload, controller.uploadResume);
+router.get('/me', requireCandidate, controller.me);
+router.get('/skills', requireCandidate, controller.skills);
+router.post('/resume', requireCandidate, upload, controller.uploadResume);
 module.exports = router;

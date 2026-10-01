@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 55 1380 410" role="img" aria-labelledby="title desc">
+  <title id="title">HireFlow</title>
+  <desc id="desc">HireFlow logo with blue and purple flowing arrow icon and the tagline Your Career. In Flow.</desc>
+
+  <defs>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18D5E8"/>
+      <stop offset="45%" stop-color="#087CF2"/>
+      <stop offset="100%" stop-color="#8A45F5"/>
+    </linearGradient>
+    <linearGradient id="flowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#08C9EE"/>
+      <stop offset="55%" stop-color="#347AF5"/>
+      <stop offset="100%" stop-color="#9A55F5"/>
+    </linearGradient>
+    <linearGradient id="shineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".95"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Transparent background -->
+
+  <!-- Abstract HireFlow icon -->
+  <g transform="translate(35 65)">
+    <!-- left upper H stroke -->
+    <path d="M75 15
+             C53 15 35 33 35 55
+             L35 168
+             L125 168
+             L125 105
+             L35 105
+             L35 55
+             C35 33 53 15 75 15 Z"
+          fill="url(#iconGrad)"/>
+
+    <!-- lower H stroke -->
+    <path d="M35 225
+             L35 335
+             C35 358 53 376 75 376
+             C91 376 106 367 115 354
+             L169 280
+             L169 207
+             L115 207
+             L115 246
+             L75 305
+             L75 225 Z"
+          fill="url(#iconGrad)"/>
+
+    <!-- forward arrow / flow body -->
+    <path d="M145 72
+             L145 122
+             L250 122
+             L250 75
+             L382 175
+             L250 275
+             L250 228
+             L145 228
+             L145 279
+             L105 279
+             L105 72 Z"
+          fill="url(#iconGrad)"/>
+
+    <!-- flowing white ribbon -->
+    <path d="M30 205
+             C78 160 121 153 164 165
+             C205 177 231 196 278 190
+             C313 186 335 171 354 158
+             C326 192 296 214 260 221
+             C213 231 181 207 142 194
+             C103 181 70 187 30 226 Z"
+          fill="url(#shineGrad)"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="445" y="275"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="142"
+        font-weight="700"
+        letter-spacing="-5">
+    <tspan fill="#111827">Hire</tspan><tspan fill="url(#flowGrad)">Flow</tspan>
+  </text>
+
+  <!-- Tagline -->
+  <text x="685" y="350"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="31"
+        font-weight="400"
+        letter-spacing="11"
+        fill="#111827">YOUR CAREER. IN FLOW.</text>
+</svg>

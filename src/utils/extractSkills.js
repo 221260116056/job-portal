@@ -1,73 +1,65 @@
-// Known-skill vocabulary with aliases. Canonical name -> array of match variants.
+// Predefined skill dictionary. Canonical name -> match variants (all lowercase).
+// Multi-word and symbol skills use substring matching; short tokens use word boundaries.
 const SKILL_ALIASES = {
-  'JavaScript': ['javascript', 'js'],
-  'TypeScript': ['typescript', 'ts'],
-  'Python': ['python'],
-  'Java': ['java'],
-  'C++': ['c++'],
-  'C#': ['c#', '.net', 'dotnet'],
-  'Go': ['golang'],
-  'Rust': ['rust'],
-  'PHP': ['php'],
-  'Ruby': ['ruby', 'rails'],
-  'Swift': ['swift'],
-  'Kotlin': ['kotlin'],
-  'Node.js': ['node.js', 'nodejs', 'node'],
-  'Express.js': ['express.js', 'expressjs', 'express'],
-  'React': ['react', 'react.js', 'reactjs'],
+  'JavaScript': ['javascript'],
+  'TypeScript': ['typescript'],
+  'Node.js': ['node.js', 'nodejs'],
+  'Express.js': ['express.js', 'expressjs'],
+  'React.js': ['react.js', 'reactjs', 'react'],
   'Angular': ['angular'],
-  'Vue': ['vue', 'vue.js', 'nuxt'],
-  'Next.js': ['next.js', 'nextjs'],
+  'Vue.js': ['vue.js', 'vuejs', 'vue', 'nuxt'],
+  'Python': ['python'],
   'Django': ['django'],
   'Flask': ['flask'],
-  'FastAPI': ['fastapi'],
-  'Spring': ['spring', 'spring boot'],
+  'Java': ['java'],
+  'Spring Boot': ['spring boot', 'spring'],
+  'PHP': ['php'],
   'Laravel': ['laravel'],
-  'HTML': ['html', 'html5'],
-  'CSS': ['css', 'css3'],
-  'Tailwind': ['tailwind'],
-  'Bootstrap': ['bootstrap'],
+  'C': ['c'],
+  'C++': ['c++'],
   'SQL': ['sql'],
   'PostgreSQL': ['postgresql', 'postgres'],
   'MySQL': ['mysql'],
   'MongoDB': ['mongodb', 'mongo'],
-  'Redis': ['redis'],
-  'SQLite': ['sqlite'],
-  'Git': ['git', 'github', 'gitlab'],
+  'HTML': ['html', 'html5'],
+  'CSS': ['css', 'css3'],
+  'Tailwind CSS': ['tailwind css', 'tailwind'],
+  'Git': ['git'],
+  'GitHub': ['github'],
   'Docker': ['docker'],
-  'Kubernetes': ['kubernetes', 'k8s'],
   'AWS': ['aws', 'amazon web services'],
   'Azure': ['azure'],
-  'GCP': ['gcp', 'google cloud'],
-  'REST': ['rest', 'rest api', 'restful'],
+  'Cloudflare': ['cloudflare'],
+  'REST API': ['rest api', 'restful api', 'restful'],
+  'JWT': ['jwt', 'json web token'],
+  'Machine Learning': ['machine learning'],
+  'Data Science': ['data science'],
+  'Next.js': ['next.js', 'nextjs'],
+  'Kubernetes': ['kubernetes', 'k8s'],
   'GraphQL': ['graphql'],
-  'Selenium': ['selenium'],
-  'Jest': ['jest'],
-  'PyTest': ['pytest'],
-  'TensorFlow': ['tensorflow'],
-  'PyTorch': ['pytorch'],
-  'Machine Learning': ['machine learning', 'ml'],
-  'Pandas': ['pandas'],
-  'NumPy': ['numpy'],
+  'Redis': ['redis'],
   'Linux': ['linux'],
   'Figma': ['figma'],
-  'Excel': ['excel', 'ms excel'],
-  'WordPress': ['wordpress'],
-  'SEO': ['seo'],
+  'Go': ['golang'],
 };
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Tokens that must match as standalone words (avoid "git" in "github", "c" in "react", "java" in "javascript").
+const needsBoundary = (v) => /^[a-z#+]+$/.test(v) && (v.length <= 4 || v === 'github');
+
 function extractSkills(text) {
   if (!text || typeof text !== 'string') return [];
-  const lower = text.toLowerCase();
+  const lower = ` ${text.toLowerCase()} `;
   const found = [];
-  for (const [canonical, variants] of Object.entries(SKILL_ALIASES)) {
+  // Longest variants first so "C++" wins before "C", "github" before "git".
+  const entries = Object.entries(SKILL_ALIASES).sort(
+    (a, b) => Math.max(...b[1].map((v) => v.length)) - Math.max(...a[1].map((v) => v.length))
+  );
+  for (const [canonical, variants] of entries) {
     const hit = variants.some((v) => {
-      // short tokens (js, ts, ml, aws, sql...) need word boundaries to avoid false positives
-      if (v.length <= 3 && !/[^a-z]/.test(v)) {
-        return new RegExp(`(^|[^a-z])${escapeRegExp(v)}([^a-z]|$)`, 'i').test(lower);
-      }
+      if (canonical === 'C') return /\bc(?![+#\w])/.test(lower);
+      if (needsBoundary(v)) return new RegExp(`(^|[^a-z#+])${escapeRegExp(v)}([^a-z+#]|$)`, 'i').test(lower);
       return lower.includes(v);
     });
     if (hit) found.push(canonical);
@@ -75,21 +67,44 @@ function extractSkills(text) {
   return [...new Set(found)];
 }
 
-// Split a job's comma-separated skills string into normalized tokens.
-function splitJobSkills(skills) {
-  if (!skills) return [];
-  return skills.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+// Normalize job skills stored as JSON array string, array, or legacy comma string.
+function normalizeSkills(skills) {
+  if (Array.isArray(skills)) return skills.map((s) => String(s).trim()).filter(Boolean);
+  if (typeof skills === 'string') {
+    const t = skills.trim();
+    if (!t) return [];
+    if (t.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(t);
+        if (Array.isArray(parsed)) return parsed.map((s) => String(s).trim()).filter(Boolean);
+      } catch { /* fall through to comma split */ }
+    }
+    return t.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
 }
 
-// Score a job against a set of resume skills. Returns { score, matched }.
-function scoreJob(resumeSkills, jobSkillsStr) {
-  const jobTokens = splitJobSkills(jobSkillsStr);
-  if (!jobTokens.length || !resumeSkills.length) return { score: 0, matched: [] };
-  const normResume = resumeSkills.map((s) => s.toLowerCase());
-  const matched = jobTokens.filter((tok) =>
-    normResume.some((rs) => rs === tok || tok.includes(rs) || rs.includes(tok))
-  );
-  return { score: matched.length / jobTokens.length, matched };
+// Serialize a skills array (or comma string) for TEXT storage.
+function serializeSkills(skills) {
+  return JSON.stringify(normalizeSkills(skills));
 }
 
-module.exports = { extractSkills, splitJobSkills, scoreJob, SKILL_ALIASES };
+// Score a job against resume skills.
+// match_percentage = round(matching required skills / total required job skills * 100)
+function scoreJob(resumeSkills, jobSkills) {
+  const jobTokens = normalizeSkills(jobSkills);
+  if (!jobTokens.length || !resumeSkills.length) return { match_percentage: 0, matched_skills: [] };
+  const normResume = resumeSkills.map((s) => String(s).toLowerCase());
+  const matched = [];
+  for (const tok of jobTokens) {
+    const low = tok.toLowerCase();
+    const hit = normResume.find((rs) => rs === low || low.includes(rs) || rs.includes(low));
+    if (hit) {
+      const canonical = resumeSkills[normResume.indexOf(hit)];
+      if (!matched.includes(canonical)) matched.push(canonical);
+    }
+  }
+  return { match_percentage: Math.round((matched.length / jobTokens.length) * 100), matched_skills: matched };
+}
+
+module.exports = { extractSkills, normalizeSkills, serializeSkills, scoreJob, SKILL_ALIASES };

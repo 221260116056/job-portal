@@ -4,22 +4,28 @@ REST API + single-deploy web UI for candidate accounts, job listings, resume upl
 
 ## Project Overview
 
-Candidates can register and log in, maintain a resume, browse jobs, apply once per job, and view only their own applications. The API uses UUID identifiers and a unique `(user_id, job_id)` database constraint.
+Two account types with separate JWT auth (`role: "candidate" | "company"`):
+
+- **Candidates** register/log in, maintain a resume (skills auto-extracted), browse jobs, apply once per job, and track their own application statuses. The API uses UUID identifiers and a unique `(user_id, job_id)` database constraint.
+- **Companies** register/log in, post jobs from a dashboard, see only their own jobs, view applications for those jobs (with candidate resumes), and update application statuses (`Applied → Under Review → Shortlisted → Rejected`).
+
+Job creation is company-only (`POST /api/company/jobs`, company taken from the JWT — any `company`/`company_id` in the body is ignored). There is no public job-creation endpoint or form.
 
 ## Frontend
 
-Open `http://localhost:5000/` after `npm run dev` — same origin, no CORS setup needed.
+Open `http://localhost:5000/` after `npm run dev` — same origin, no CORS setup needed. Hash routes with role guards (backend enforces the same rules):
 
-- Login / Register (JWT stored in `localStorage`)
-- Jobs tab: "Recommended for you" skill-matched ranking after resume upload, search, pagination, details modal, 1-click Apply, post-a-job demo form
-- My Applications tab: your applications only
-- Profile tab: view profile, detected resume skill tags, upload/replace resume (PDF/DOCX best, DOC best-effort, 5 MB)
-- Same Render deployment serves both UI and API.
+- Public: `#/jobs` (Available Jobs, search, pagination, details, Apply), `#/login`, `#/register` (confirm password), `#/company/login`, `#/company/register`
+- Candidate (after login): Jobs (+ skill-matched recommendations), `#/my-applications` (status tracking), `#/profile` (skill tags + resume upload)
+- Company (after login): `#/company/dashboard` (stats + own jobs + Edit), `#/company/jobs`, `#/company/jobs/create`, `#/company/jobs/:id/edit`, `#/company/applications` (job/status filters, resume links, status dropdown)
+- Same Render deployment serves both UI and API. Deep paths (`/login`, `/company/dashboard`, …) serve the SPA directly.
 
 ## Features
 
-- Password hashing with bcryptjs and JWT protected endpoints
-- Job listing and details with pagination
+- Password hashing with bcryptjs and role-based JWT auth (`authenticateToken`, `requireCandidate`, `requireCompany`)
+- Public job listing and details with pagination; skill-based recommendations for candidates
+- Company job CRUD scoped to the JWT company; cross-company access returns 404
+- Company application inbox (candidate + resume) with ownership-checked status updates
 - Resume upload and replacement (PDF, DOC, DOCX; 5 MB maximum) with automatic skill extraction
 - Skill-based job recommendations (`GET /api/jobs/matched`: match_score / match_percent per job)
 - Candidate scoped application views and duplicate application protection
@@ -37,12 +43,12 @@ job-application-portal/
 ├── public/{index.html,styles.css,app.js}
 ├── src/
 │   ├── config/database.js
-│   ├── controllers/{authController,jobController,applicationController,userController}.js
+│   ├── controllers/{authController,jobController,applicationController,userController,companyAuthController,companyJobController,companyApplicationController}.js
 │   ├── middleware/{authMiddleware,uploadMiddleware,errorMiddleware,validationMiddleware}.js
-│   ├── models/{User,Job,Application,index}.js
-│   ├── routes/{authRoutes,jobRoutes,applicationRoutes,userRoutes}.js
-│   ├── seed/seedJobs.js
-│   ├── utils/{generateToken,response}.js
+│   ├── models/{User,Company,Job,Application,index}.js
+│   ├── routes/{authRoutes,jobRoutes,applicationRoutes,userRoutes,companyRoutes}.js
+│   ├── seed/seedJobs.js (also seeds demo company `company@example.com` / `Password@123`)
+│   ├── utils/{generateToken (role-aware),response,extractSkills,parseResume}.js
 │   └── app.js
 ├── uploads/resumes/.gitkeep
 ├── postman/Job-Application-Portal.postman_collection.json
@@ -213,45 +219,46 @@ Response `200`:
   "message": "Resume uploaded successfully",
   "data": {
     "resume_url": "/uploads/resumes/resume-uuid.pdf",
-    "resume_skills": ["Node.js", "Express.js", "PostgreSQL", "React"],
-    "message_hint": "Detected 4 skill(s). See GET /api/jobs/matched for jobs matching your profile."
+    "skills": ["Node.js", "Express.js", "PostgreSQL", "React.js"],
+    "message_hint": "Detected 4 skill(s). See GET /api/jobs/recommended for jobs matching your profile."
   }
 }
 ```
 
-The server extracts text (PDF via `pdf-parse`, DOCX via `mammoth`) and matches it against a known-skill vocabulary (~50 skills: languages, frameworks, DBs, DevOps, cloud). Detected skills are stored on the user and returned by `GET /api/users/me` as `resume_skills`. Scanned `.doc` (legacy binary) falls back to best-effort text; text-based PDF/DOCX gives best results.
+The server extracts text (PDF via `pdf-parse`, DOCX via `mammoth`) and matches it against the skill dictionary in `src/utils/extractSkills.js`. Files with no extractable text are rejected with `422 "Unable to extract text from this resume"` (the upload is discarded, nothing is stored). Detected skills are stored in `users.skills` (JSONB) and returned by `GET /api/users/me` and `GET /api/users/skills`. Raw `resume_text` is stored for matching but never returned by normal user endpoints. Re-uploading replaces `resume_url`, text, and skills, so recommendations change immediately. Legacy `.doc` uploads are accepted but parsed best-effort; text-based PDF/DOCX gives best results.
 
 Errors: `400` missing/unsupported file, `413` over limit, `401` auth failure.
 
-### 5. Matched jobs (skill-based) — `GET /api/jobs/matched` (Bearer token)
+### 5. Recommended jobs — `GET /api/jobs/recommended` (candidate JWT)
 
-Ranks all jobs by overlap between your resume skills and each job's `skills` list. Each job gets `match_score` (0–1), `match_percent`, and `matched_skills`. Sorted best match first.
+Ranks jobs by overlap between your stored resume skills and each job's required `skills`. Only jobs with `match_percentage >= MIN_JOB_MATCH_PERCENTAGE` (default `30`) are returned, sorted best match first. Calculation is backend-only; the frontend only displays the result.
+
+Formula: `match_percentage = round(matching required skills / total required job skills × 100)`
+
+Example: candidate `Node.js, React.js, PostgreSQL` vs job `Node.js, Express.js, PostgreSQL, Docker` → matches `Node.js, PostgreSQL` → `2 / 4 = 50%`.
 
 Response `200`:
 
 ```json
 {
   "success": true,
-  "message": "Skill-matched jobs retrieved successfully",
-  "data": {
-    "resume_skills": ["Node.js", "Express.js", "PostgreSQL"],
-    "total": 5,
-    "jobs": [
-      {
-        "id": "job-uuid-1",
-        "title": "Node.js Developer Intern",
-        "company": "Potenz Technology",
-        "skills": "Node.js, Express.js, PostgreSQL",
-        "match_score": 1,
-        "match_percent": 100,
-        "matched_skills": ["node.js", "express.js", "postgresql"]
-      }
-    ]
-  }
+  "message": "Recommended jobs retrieved successfully",
+  "data": [
+    {
+      "id": "job-uuid-1",
+      "title": "Node.js Developer Intern",
+      "company": "ABC Technologies",
+      "location": "Ahmedabad",
+      "employment_type": "Internship",
+      "skills": ["Node.js", "Express.js", "PostgreSQL"],
+      "match_percentage": 100,
+      "matched_skills": ["Node.js", "Express.js", "PostgreSQL"]
+    }
+  ]
 }
 ```
 
-With no detected skills it returns all jobs unranked (`match_score: 0`). Errors: `401` unauthenticated.
+No stored skills → `200 "Upload your resume to get personalized job recommendations."` with `data: []` (no fake percentages). No jobs above the threshold → `200 "No matching jobs found"` with `data: []`. Errors: `401` unauthenticated, `403` company token. (`GET /api/jobs/matched` remains as a legacy alias with the older response shape.)
 
 ### 6. List jobs — `GET /api/jobs?page=1&limit=10` (public)
 
@@ -297,42 +304,63 @@ Response `200`:
 
 Errors: `400` malformed ID, `404` job not found.
 
-### 8. Create job — `POST /api/jobs` (public for this assignment, JSON)
+### 8. Company auth — `POST /api/company/auth/register` / `POST /api/company/auth/login` (public)
 
-Request:
+Register request:
+
+```json
+{
+  "company_name": "ABC Technologies",
+  "email": "hr@abc.example.com",
+  "password": "Password@123",
+  "location": "Ahmedabad",
+  "website": "https://example.com"
+}
+```
+
+Login request: `{ "email": "hr@abc.example.com", "password": "Password@123" }`. Response `200` returns `{ token, role: "company", company: { id, company_name, email, location, website } }`. Passwords are bcrypt-hashed and never returned. Errors: `422` invalid fields, `409` duplicate email, `401` bad credentials.
+
+### 9. Company jobs — `GET/POST /api/company/jobs`, `GET/PUT/DELETE /api/company/jobs/:id` (company JWT)
+
+Scoped to the JWT company; another company's job IDs return `404`. Create/update request (`skills` required — array or comma string; `company`/`company_id` ignored, taken from the token):
 
 ```json
 {
   "title": "Backend Developer Intern",
-  "company": "ABC Technologies",
   "description": "Work with Node.js APIs",
   "location": "Ahmedabad",
   "employment_type": "Internship",
-  "skills": "Node.js, Express.js, PostgreSQL"
+  "skills": ["Node.js", "Express.js", "PostgreSQL"]
 }
 ```
 
-Response `201`:
+List response includes `applications_count` per job. Errors: `401` unauthenticated, `403` candidate token, `422` validation failure.
+
+### 10. Company applications — `GET /api/company/applications` (company JWT)
+
+Returns applications for the company's own jobs only:
 
 ```json
 {
   "success": true,
-  "message": "Job created successfully",
-  "data": {
-    "id": "new-job-uuid",
-    "title": "Backend Developer Intern",
-    "company": "ABC Technologies",
-    "description": "Work with Node.js APIs",
-    "location": "Ahmedabad",
-    "employment_type": "Internship",
-    "skills": "Node.js, Express.js, PostgreSQL"
-  }
+  "message": "Company applications retrieved successfully",
+  "data": [
+    {
+      "id": "<application UUID>",
+      "status": "Applied",
+      "candidate": { "name": "Vraj Vekariya", "email": "vraj@example.com", "resume_url": "/uploads/resumes/resume-uuid.pdf" },
+      "job": { "id": "<job UUID>", "title": "Node.js Developer Intern" },
+      "applied_at": "2026-10-01T10:00:00.000Z"
+    }
+  ]
 }
 ```
 
-Required: title, company, description, location, employment_type. Errors: `422` validation failure.
+### 11. Update application status — `PUT /api/company/applications/:id/status` (company JWT)
 
-### 9. Apply for a job — `POST /api/applications` (Bearer token, JSON)
+Request: `{ "status": "Shortlisted" }`. Allowed: `Applied`, `Under Review`, `Shortlisted`, `Rejected` (else `422`). Only the owning company can update (else `404`).
+
+### 12. Apply for a job — `POST /api/applications` (candidate JWT, JSON)
 
 Request:
 
@@ -356,7 +384,7 @@ Response `201`:
 
 Errors: `401` unauthenticated, `404` job missing, `409` already applied, `422` invalid UUID.
 
-### 10. List my applications — `GET /api/applications` (Bearer token)
+### 13. List my applications — `GET /api/applications` (candidate JWT)
 
 Response `200`:
 
@@ -376,7 +404,7 @@ Response `200`:
 
 Errors: `401` unauthenticated.
 
-### 11. Get my application — `GET /api/applications/:id` (Bearer token, UUID)
+### 14. Get my application — `GET /api/applications/:id` (candidate JWT, UUID)
 
 Response `200`:
 
@@ -406,11 +434,23 @@ Unknown paths return 404. Unexpected server errors return a generic 500 response
 
 ## Postman
 
-Import `postman/Job-Application-Portal.postman_collection.json`. The collection sets `baseUrl` to `http://localhost:5000`, stores the login token automatically, and captures job/application IDs from responses. Suggested order: Health Check, Register, Login, Get Current User, Upload Resume (select a file), Get Matched Jobs (skill-based), Get All Jobs, Get Job By ID, Apply For Job, Get My Applications, Get Application By ID. Create Job is optional; seeding provides five jobs.
+Import `postman/Job-Application-Portal.postman_collection.json`. Candidate login stores `candidateToken`, company login stores `companyToken`; protected requests use the correct variable automatically. and captures job/application IDs from responses. Suggested order: Register → Login → Get Profile → Upload Resume (select a file) → Get Skills → Get All Jobs → Get Recommended Jobs → Apply For Job → Get My Applications, then Company Register → Company Login → Create Job → Get Company Jobs → Update Job → Get Company Applications → Update Application Status → Delete Job. Seeding (`npm run seed`) provides five jobs plus demo company `company@example.com` / `Password@123`.
 
 ## Resume Upload
 
 The Multer disk store places local files in `uploads/resumes/`, gives them UUID based names, checks extension and MIME type, and enforces a 5 MB cap. The previous file is removed after a successful replacement where possible.
+
+## Resume-Based Job Recommendation
+
+1. Candidate uploads a resume (`POST /api/users/resume`, PDF/DOCX best, DOC best-effort, 5 MB).
+2. Resume text is extracted (`pdf-parse` for PDF, `mammoth` for DOCX). Unreadable files are rejected with `422` and never stored.
+3. Supported skills are detected case-insensitively against the dictionary in `src/utils/extractSkills.js` (no duplicates, no invented skills).
+4. Skills are stored in `users.skills` (PostgreSQL JSONB); raw text is stored but never returned by user endpoints.
+5. Each job's required `skills` (mandatory on company create/update, normalized to an array) are compared with the candidate's skills.
+6. Match percentage is calculated: `match_percentage = round(matching required skills / total required job skills × 100)`.
+7. `GET /api/jobs/recommended` returns jobs with `match_percentage >= MIN_JOB_MATCH_PERCENTAGE` (default `30`), sorted descending, each with `matched_skills`.
+
+Example: candidate `Node.js, Express.js, PostgreSQL, React.js` vs `Node.js Developer Intern` requiring `Node.js, Express.js, PostgreSQL` → `3/3 = 100%` with all three matched; vs a job also requiring `Docker` → `3/4 = 75%`. Re-uploading a resume replaces skills and recommendations immediately. Companies never see recommendations — only their own jobs, applications, and candidate resumes.
 
 ## Deployment (Render)
 
@@ -432,6 +472,7 @@ Use a Render PostgreSQL instance rather than localhost in deployment. Local disk
 | `JWT_SECRET` | Yes | Secret used to sign and verify tokens |
 | `JWT_EXPIRES_IN` | No | Token lifetime; defaults to `7d` |
 | `UPLOAD_DIR` | No | Resume storage path; defaults to `uploads/resumes` |
+| `MIN_JOB_MATCH_PERCENTAGE` | No | Minimum skill-match % for recommendations; defaults to `30` |
 
 Sample `.env` (see also `.env.example` — never commit real secrets):
 
@@ -442,11 +483,12 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/job_portal
 JWT_SECRET=replace_with_a_long_random_secret
 JWT_EXPIRES_IN=7d
 UPLOAD_DIR=uploads/resumes
+MIN_JOB_MATCH_PERCENTAGE=30
 ```
 
 ## Security Notes
 
-Passwords are bcrypt hashed and excluded from default user queries. JWT secrets and database credentials belong in environment variables. ORM queries are parameterized. Rate limiting, Helmet, validation, ownership checks, and upload restrictions are enabled. Job creation is intentionally public per the assignment; add an admin role before exposing it in a real hiring system.
+Passwords (candidate + company) are bcrypt hashed and excluded from default queries. JWTs carry `{ sub, role }`; `requireCandidate` / `requireCompany` enforce roles and return 401/403 — company identity and candidate identity always come from the token, never from request bodies. Cross-company job/application access returns 404. ORM queries are parameterized. Rate limiting, Helmet, validation, ownership checks, and upload restrictions are enabled.
 
 ## Author
 

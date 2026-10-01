@@ -5,10 +5,24 @@ const path = require('path');
 async function parseResume(filePath, originalName = '') {
   const ext = (path.extname(originalName || filePath) || '').toLowerCase();
   if (ext === '.pdf') {
-    const pdfParse = require('pdf-parse');
+    const pdfMod = require('pdf-parse');
     const buf = await fs.readFile(filePath);
-    const data = await pdfParse(buf);
-    return (data.text || '').trim();
+    let text = '';
+    if (typeof pdfMod === 'function') {
+      // pdf-parse v1 API
+      const data = await pdfMod(buf);
+      text = data.text || '';
+    } else if (pdfMod.PDFParse) {
+      // pdf-parse v2 API
+      const parser = new pdfMod.PDFParse({ data: buf });
+      try {
+        const result = await parser.getText();
+        text = result.text || '';
+      } finally {
+        if (typeof parser.destroy === 'function') await parser.destroy().catch(() => {});
+      }
+    }
+    return (text || '').trim();
   }
   if (ext === '.docx') {
     const mammoth = require('mammoth');
