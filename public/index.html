@@ -168,29 +168,64 @@
 
     <!-- Company: dashboard -->
     <section id="view-company-dashboard" class="view">
-      <h2>Company Dashboard</h2>
-      <p class="muted" id="dashWelcome"></p>
-      <div class="stats">
-        <div class="card stat"><div class="stat-num" id="statJobs">0</div><div class="muted">Jobs Posted</div></div>
-        <div class="card stat"><div class="stat-num" id="statApps">0</div><div class="muted">Applications</div></div>
+      <div class="dash-header">
+        <div>
+          <h2>Company Dashboard</h2>
+          <p class="muted" id="dashWelcome">Welcome back</p>
+        </div>
+        <div class="dash-quick-actions">
+          <a class="btn btn-secondary" href="#/company/jobs/create">+ Post New Job</a>
+          <a class="btn btn-primary-outline" href="#/company/applications">View Applications</a>
+        </div>
       </div>
-      <div class="toolbar">
-        <h3>My Jobs</h3>
+
+      <div class="stats-grid">
+        <div class="stat-card stat-jobs">
+          <div class="stat-icon">💼</div>
+          <div class="stat-content">
+            <div class="stat-num" id="statJobs">0</div>
+            <div class="stat-label">Jobs Posted</div>
+          </div>
+        </div>
+        <div class="stat-card stat-apps">
+          <div class="stat-icon">📄</div>
+          <div class="stat-content">
+            <div class="stat-num" id="statApps">0</div>
+            <div class="stat-label">Total Applications</div>
+          </div>
+        </div>
+        <div class="stat-card stat-status">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-content">
+            <div class="stat-num" id="statUnderReview">0</div>
+            <div class="stat-label">Active / In Review</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-toolbar">
+        <div>
+          <h3>My Posted Jobs</h3>
+          <p class="muted">Manage your job openings and candidate pipeline</p>
+        </div>
         <span class="spacer"></span>
-        <a class="btn btn-secondary" href="#/company/jobs/create">+ Add New Job</a>
-        <a class="btn" href="#/company/applications">View Applications</a>
+        <a class="btn btn-secondary btn-sm" href="#/company/jobs/create">+ Add New Job</a>
+        <a class="btn btn-sm" href="#/company/applications">All Applications</a>
       </div>
-      <div id="dashJobs"></div>
+      <div id="companyDashJobs" class="jobs-grid"></div>
     </section>
 
     <!-- Company: my jobs -->
     <section id="view-company-jobs" class="view">
-      <div class="toolbar">
-        <h2>My Jobs</h2>
+      <div class="section-toolbar">
+        <div>
+          <h2>My Job Listings</h2>
+          <p class="muted">All job openings published by your organization</p>
+        </div>
         <span class="spacer"></span>
-        <a class="btn btn-secondary" href="#/company/jobs/create">+ Add New Job</a>
+        <a class="btn btn-secondary" href="#/company/jobs/create">+ Post New Job</a>
       </div>
-      <div id="companyJobsList"></div>
+      <div id="companyJobsList" class="jobs-grid"></div>
     </section>
 
     <!-- Company: create / edit job -->

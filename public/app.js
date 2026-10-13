@@ -333,34 +333,89 @@ $('resumeForm').addEventListener('submit', uploadResume('resumeFile', () => { lo
 
 // ---------- company: dashboard / jobs / applications ----------
 let coJobsCache = [];
+
+function companyJobCard(j) {
+  const skills = skillList(j.skills);
+  const skillBadges = skills.slice(0, 4).map((s) => `<span class="skill-tag">${s}</span>`).join('');
+  const extraSkills = skills.length > 4 ? `<span class="pill">+${skills.length - 4}</span>` : '';
+  const appCount = j.applications_count || 0;
+  const appBadgeClass = appCount > 0 ? 'good' : 'warn';
+  const postedDate = j.created_at ? new Date(j.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+  return `
+    <div class="card job-card company-card">
+      <div class="card-top">
+        <div>
+          <span class="pill">${j.employment_type || 'Full-time'}</span>
+          <span class="pill muted">${j.location || 'Remote'}</span>
+        </div>
+        <span class="pill ${appBadgeClass}">${appCount} ${appCount === 1 ? 'Applicant' : 'Applicants'}</span>
+      </div>
+      <h3 class="job-card-title">${j.title}</h3>
+      <p class="job-card-desc muted">${j.description ? (j.description.length > 120 ? j.description.slice(0, 120) + '...' : j.description) : 'No description provided.'}</p>
+      <div class="card-skills">
+        ${skillBadges} ${extraSkills}
+      </div>
+      <div class="card-footer">
+        ${postedDate ? `<span class="muted font-xs">Posted: ${postedDate}</span>` : '<span class="spacer"></span>'}
+        <div class="job-actions">
+          <a class="btn btn-ghost btn-sm" href="#/company/applications" title="View candidates for this job">Applicants (${appCount})</a>
+          <a class="btn btn-sm" href="#/company/jobs/${j.id}/edit">Edit</a>
+          <button class="btn btn-danger btn-sm" data-del="${j.id}">Delete</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+const emptyCompanyJobsState = `
+  <div class="card empty-dashboard-card span-all">
+    <div class="empty-icon">💼</div>
+    <h3>No Jobs Posted Yet</h3>
+    <p class="muted">Publish your first job vacancy to start receiving qualified candidates and AI-matched resumes.</p>
+    <a class="btn btn-secondary mt-3" href="#/company/jobs/create">+ Post Your First Job</a>
+  </div>`;
+
+function wireCompanyDeleteButtons(reloadFn) {
+  document.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this job? Applications for it will also be removed.')) return;
+    try {
+      await api(`/api/company/jobs/${b.dataset.del}`, { method: 'DELETE' });
+      toast('Job deleted');
+      reloadFn();
+    } catch (err) {
+      toast(err.message);
+    }
+  }));
+}
+
 async function loadDashboard() {
   try {
     const [jobsRes, appsRes] = await Promise.all([api('/api/company/jobs'), api('/api/company/applications')]);
     coJobsCache = jobsRes.data || [];
-    $('dashWelcome').textContent = `Welcome, ${session().name || ''}`;
+    const apps = appsRes.data || [];
+    const inReview = apps.filter((a) => a.status === 'Under Review' || a.status === 'Applied').length;
+
+    $('dashWelcome').textContent = `Welcome, ${session().name || 'Partner'}`;
     $('statJobs').textContent = coJobsCache.length;
-    $('statApps').textContent = (appsRes.data || []).length;
-    $('dashJobs').innerHTML = coJobsCache.length ? coJobsCache.map((j) => `
-      <div class="card"><b>${j.title}</b> <span class="muted">• ${j.location} • ${j.employment_type}</span><br/>
-      <span class="pill">${j.applications_count} Applications</span>
-      <div class="job-actions"><a class="btn btn-ghost" href="#/company/applications">View Applications</a><a class="btn" href="#/company/jobs/${j.id}/edit">Edit</a></div></div>`).join('')
-      : '<p class="muted">No jobs yet. Post your first job.</p>';
+    $('statApps').textContent = apps.length;
+    const statReviewEl = $('statUnderReview');
+    if (statReviewEl) statReviewEl.textContent = inReview;
+
+    const targetEl = $('companyDashJobs') || $('dashJobs');
+    if (targetEl) {
+      targetEl.innerHTML = coJobsCache.length ? coJobsCache.map(companyJobCard).join('') : emptyCompanyJobsState;
+    }
+    wireCompanyDeleteButtons(loadDashboard);
   } catch (err) { toast(err.message); }
 }
+
 async function loadCompanyJobs() {
   try {
     const res = await api('/api/company/jobs');
     coJobsCache = res.data || [];
-    $('companyJobsList').innerHTML = coJobsCache.length ? coJobsCache.map((j) => `
-      <div class="card"><b>${j.title}</b> <span class="muted">• ${j.location} • ${j.employment_type}</span><br/>
-      <span class="pill">${j.applications_count} Applications</span> <span class="muted">${skillList(j.skills).join(', ')}</span>
-      <div class="job-actions"><a class="btn btn-ghost" href="#/company/applications">View Applications</a><a class="btn" href="#/company/jobs/${j.id}/edit">Edit</a><button class="btn btn-danger" data-del="${j.id}">Delete</button></div></div>`).join('')
-      : '<p class="muted">No jobs yet.</p>';
-    document.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
-      if (!confirm('Delete this job? Applications for it will also be removed.')) return;
-      try { await api(`/api/company/jobs/${b.dataset.del}`, { method: 'DELETE' }); toast('Job deleted'); loadCompanyJobs(); }
-      catch (err) { toast(err.message); }
-    }));
+    $('companyJobsList').innerHTML = coJobsCache.length ? coJobsCache.map(companyJobCard).join('') : emptyCompanyJobsState;
+    wireCompanyDeleteButtons(loadCompanyJobs);
   } catch (err) { toast(err.message); }
 }
 let editingJobId = null;
