@@ -1,4 +1,4 @@
-const { Application, Job } = require('../models');
+const { Application, Job, Company, Notification } = require('../models');
 const { success } = require('../utils/response');
 
 exports.create = async (req, res, next) => {
@@ -20,6 +20,27 @@ exports.create = async (req, res, next) => {
       }
     });
     if (!created) return res.status(409).json({ success: false, message: 'You have already applied for this job' });
+
+    // Notify company if job is posted by a company
+    if (job.company_id) {
+      await Notification.create({
+        company_id: job.company_id,
+        title: 'New Application Received',
+        message: `${req.user.name || 'A candidate'} applied for "${job.title}"`,
+        type: 'application',
+        link: '#/company/applications'
+      }).catch(() => {});
+    }
+
+    // Notify candidate
+    await Notification.create({
+      user_id: req.user.id,
+      title: 'Application Submitted',
+      message: `You applied for "${job.title}" at ${job.company || 'the hiring team'}.`,
+      type: 'application',
+      link: '#/my-applications'
+    }).catch(() => {});
+
     return success(res, 'Application submitted successfully', {
       id: application.id,
       job_id: application.job_id,
@@ -29,22 +50,45 @@ exports.create = async (req, res, next) => {
     }, 201);
   } catch (error) { next(error); }
 };
+
 exports.list = async (req, res, next) => {
   try {
     const apps = await Application.findAll({
       where: { user_id: req.user.id },
-      include: [{ model: Job, attributes: ['id', 'title', 'company', 'location'] }],
+      include: [
+        {
+          model: Job,
+          attributes: ['id', 'title', 'company', 'location', 'company_id', 'salary_min', 'salary_max', 'employment_type'],
+          include: [
+            {
+              model: Company,
+              attributes: ['id', 'company_name', 'email', 'location']
+            }
+          ]
+        }
+      ],
       order: [['applied_at', 'DESC']]
     });
     return success(res, 'Applications retrieved successfully', apps);
   } catch (error) { next(error); }
 };
+
 exports.get = async (req, res, next) => {
   try {
     const app = await Application.findByPk(req.params.id, {
-      include: [{ model: Job, attributes: ['id', 'title', 'company', 'description', 'location', 'employment_type', 'skills'] }]
+      include: [{ model: Job, attributes: ['id', 'title', 'company', 'company_id', 'description', 'location', 'employment_type', 'skills'] }]
     });
     if (!app || app.user_id !== req.user.id) return res.status(404).json({ success: false, message: 'Application not found' });
     return success(res, 'Application retrieved successfully', app);
+  } catch (error) { next(error); }
+};
+
+exports.archive = async (req, res, next) => {
+  try {
+    const app = await Application.findByPk(req.params.id);
+    if (!app || app.user_id !== req.user.id) return res.status(404).json({ success: false, message: 'Application not found' });
+    const nextStatus = app.status === 'Archived' ? 'Applied' : 'Archived';
+    await app.update({ status: nextStatus });
+    return success(res, `Application marked as ${nextStatus}`, { id: app.id, status: nextStatus });
   } catch (error) { next(error); }
 };

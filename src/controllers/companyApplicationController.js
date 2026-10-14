@@ -1,7 +1,7 @@
-const { Application, Job, User } = require('../models');
+const { Application, Job, User, Notification } = require('../models');
 const { success } = require('../utils/response');
 
-const STATUSES = ['Applied', 'Under Review', 'Shortlisted', 'Rejected'];
+const STATUSES = ['Applied', 'Under Review', 'Shortlisted', 'Interview', 'Rejected', 'Archived'];
 
 // Applications for jobs owned by the authenticated company.
 exports.list = async (req, res, next) => {
@@ -44,6 +44,18 @@ exports.updateStatus = async (req, res, next) => {
     const app = await Application.findByPk(req.params.id, { include: [{ model: Job, attributes: ['id', 'company_id', 'title'] }] });
     if (!app || !app.Job || app.Job.company_id !== req.company.id) return res.status(404).json({ success: false, message: 'Application not found' });
     await app.update({ status });
+
+    // Notify candidate of status update
+    if (app.user_id) {
+      await Notification.create({
+        user_id: app.user_id,
+        title: `Application Status: ${status}`,
+        message: `Your application for "${app.Job.title}" has been updated to "${status}".`,
+        type: 'status_change',
+        link: '#/my-applications'
+      }).catch(() => {});
+    }
+
     return success(res, 'Application status updated successfully', { id: app.id, status: app.status, job: { id: app.Job.id, title: app.Job.title } });
   } catch (error) { next(error); }
 };

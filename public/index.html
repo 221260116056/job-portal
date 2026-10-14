@@ -12,6 +12,36 @@
     <div class="brand"><a href="#/jobs" class="brand-logo" aria-label="HireFlow home"><svg viewBox="10 6 338 82" width="175" height="52" role="img" aria-label="HireFlow - Your Career. In Flow."><title>HireFlow</title><defs><linearGradient id="nfIcon" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="30%" stop-color="#38BDF8"/><stop offset="55%" stop-color="#3B82F6"/><stop offset="78%" stop-color="#6366F1"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient><linearGradient id="nfFlow" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#22D3EE"/><stop offset="50%" stop-color="#3B82F6"/><stop offset="100%" stop-color="#8B5CF6"/></linearGradient><linearGradient id="nfShine" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FFFFFF" stop-opacity=".95"/><stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient></defs><g transform="translate(10 9) scale(0.22)"><path d="M75 15 C53 15 35 33 35 55 L35 168 L125 168 L125 105 L35 105 L35 55 C35 33 53 15 75 15 Z" fill="url(#nfIcon)"/><path d="M35 225 L35 335 C35 358 53 376 75 376 C91 376 106 367 115 354 L169 280 L169 207 L115 207 L115 246 L75 305 L75 225 Z" fill="url(#nfIcon)"/><path d="M145 72 L145 122 L250 122 L250 75 L382 175 L250 275 L250 228 L145 228 L145 279 L105 279 L105 72 Z" fill="url(#nfIcon)"/><path d="M30 205 C78 160 121 153 164 165 C205 177 231 196 278 190 C313 186 335 171 354 158 C326 192 296 214 260 221 C213 231 181 207 142 194 C103 181 70 187 30 226 Z" fill="url(#nfShine)"/></g><text x="106" y="58" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" letter-spacing="-1"><tspan fill="#F8FAFC">Hire</tspan><tspan fill="url(#nfFlow)">Flow</tspan></text><text x="108" y="80" font-family="Arial, Helvetica, sans-serif" font-size="12" letter-spacing="3" fill="#CBD5E1">YOUR CAREER. IN FLOW.</text></svg></a></div>
     <nav class="nav" id="mainNav"></nav>
     <div class="auth-area">
+      <!-- Notification Toggle -->
+      <div class="nav-action-wrap" id="notifWrap">
+        <button id="notifToggleBtn" class="nav-icon-btn hidden" title="Notifications" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="notifBadge" class="nav-badge hidden">0</span>
+        </button>
+        <div id="notifDropdown" class="notif-dropdown hidden" role="region" aria-label="Notifications">
+          <div class="notif-header">
+            <h4>Notifications</h4>
+            <button id="notifMarkAllRead" class="btn-text" type="button">Mark all read</button>
+          </div>
+          <div id="notifList" class="notif-list">
+            <div class="notif-empty">No notifications yet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages Toggle -->
+      <div class="nav-action-wrap" id="msgWrap">
+        <button id="msgToggleBtn" class="nav-icon-btn hidden" title="Messages & Chat" aria-label="Messages" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span id="msgBadge" class="nav-badge hidden">0</span>
+        </button>
+      </div>
+
       <span id="userBadge" class="user-badge hidden"></span>
       <div id="authDropdown" class="dropdown hidden">
         <button id="authDropBtn" class="btn btn-primary" aria-haspopup="true" aria-expanded="false">Login / Register ▾</button>
@@ -195,13 +225,45 @@
       </div>
     </section>
 
-    <!-- Candidate: applications -->
+    <!-- Candidate: applications & saved jobs -->
     <section id="view-my-applications" class="view">
-      <div class="card">
-        <h2>My Applications</h2>
-        <p class="muted">Track your application status.</p>
-        <div id="appsList"></div>
+      <div class="apps-header-card card">
+        <div class="apps-header-row">
+          <div>
+            <h2>My Applications & Saved Jobs</h2>
+            <p class="muted">Track your applied roles, interviews, bookmarks, and status changes in real-time.</p>
+          </div>
+          <div class="apps-quick-actions">
+            <a href="#/jobs" class="btn btn-primary btn-sm">+ Browse More Jobs</a>
+          </div>
+        </div>
+
+        <!-- Filter tabs: All, Applied, Interview, Saved, Archived -->
+        <div class="apps-nav-tabs" role="tablist">
+          <button type="button" class="app-tab-btn active" data-tab="all" role="tab" aria-selected="true">
+            <span>All</span>
+            <span class="tab-count" id="countTabAll">0</span>
+          </button>
+          <button type="button" class="app-tab-btn" data-tab="applied" role="tab" aria-selected="false">
+            <span>Applied</span>
+            <span class="tab-count" id="countTabApplied">0</span>
+          </button>
+          <button type="button" class="app-tab-btn" data-tab="interview" role="tab" aria-selected="false">
+            <span>Interview / Shortlisted</span>
+            <span class="tab-count" id="countTabInterview">0</span>
+          </button>
+          <button type="button" class="app-tab-btn" data-tab="saved" role="tab" aria-selected="false">
+            <span>Saved Jobs</span>
+            <span class="tab-count" id="countTabSaved">0</span>
+          </button>
+          <button type="button" class="app-tab-btn" data-tab="archived" role="tab" aria-selected="false">
+            <span>Archived</span>
+            <span class="tab-count" id="countTabArchived">0</span>
+          </button>
+        </div>
       </div>
+
+      <div id="appsList" class="apps-list-wrap"></div>
     </section>
 
     <!-- Candidate: profile (Name Update + Password Update + Resume) -->
@@ -535,6 +597,63 @@
       <div class="modal-actions mt-3">
         <button type="button" class="btn btn-secondary btn-sm" id="btnPrintResume">🖨️ Print / Save as PDF</button>
         <button type="button" class="btn btn-ghost btn-sm" id="btnCloseResume">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Direct Messaging / Chat Modal -->
+  <div id="chatModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="chatModalHeading">
+    <div class="modal-card chat-modal-card">
+      <div class="chat-modal-layout">
+        <!-- Sidebar: Conversations List -->
+        <div class="chat-sidebar" id="chatSidebar">
+          <div class="chat-sidebar-header">
+            <div class="chat-brand-title">
+              <span class="chat-icon">💬</span>
+              <h3 id="chatModalHeading">Messages</h3>
+            </div>
+            <button type="button" id="chatModalClose" class="btn btn-ghost btn-sm" aria-label="Close Chat">✕</button>
+          </div>
+          <div class="chat-search-wrap">
+            <input type="text" id="chatSearchInput" placeholder="Filter conversations..." />
+          </div>
+          <div id="chatConversationsList" class="chat-conv-list">
+            <div class="chat-empty-conversations">Loading conversations...</div>
+          </div>
+        </div>
+
+        <!-- Chat Main Area: Active Thread -->
+        <div class="chat-thread-container" id="chatThreadContainer">
+          <div class="chat-thread-header" id="chatThreadHeader">
+            <div class="chat-thread-party-info">
+              <button type="button" id="chatBackBtn" class="chat-back-btn hidden" title="Back to conversations">←</button>
+              <div class="chat-avatar" id="chatActiveAvatar">?</div>
+              <div class="chat-active-text">
+                <strong id="chatActiveName">Direct Chat</strong>
+                <span id="chatActiveSubtitle" class="chat-active-sub">Select or start a conversation</span>
+              </div>
+            </div>
+            <div class="chat-header-actions">
+              <button type="button" id="chatCloseThreadBtn" class="btn btn-ghost btn-sm" aria-label="Close">✕</button>
+            </div>
+          </div>
+
+          <div class="chat-messages-body" id="chatMessagesBody">
+            <div class="chat-placeholder-state">
+              <div class="chat-placeholder-icon">💬</div>
+              <h4>No conversation selected</h4>
+              <p class="muted">Choose a conversation from the left or click <strong>Message Company</strong> on any job or application.</p>
+            </div>
+          </div>
+
+          <form id="chatSendForm" class="chat-input-bar hidden">
+            <input type="text" id="chatMsgInput" placeholder="Type a message..." autocomplete="off" required />
+            <button type="submit" class="btn btn-primary" id="chatSendBtn" title="Send message">
+              <span>Send</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   </div>

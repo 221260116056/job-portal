@@ -29,6 +29,31 @@ const toast = (msg) => {
 };
 const skillList = (skills) => Array.isArray(skills) ? skills : [];
 
+// ---------- state & bookmarks ----------
+const savedJobIdsSet = new Set();
+let cachedApplications = [];
+let cachedSavedJobs = [];
+let currentAppTab = 'all';
+
+function timeAgo(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffSec = Math.floor((now - date) / 1000);
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // ---------- navigation ----------
 const NAVS = {
   public: [['#/jobs', 'Jobs']],
@@ -52,6 +77,20 @@ function renderNav() {
   $('logoutBtn').classList.toggle('hidden', loggedOut);
   $('userBadge').classList.toggle('hidden', loggedOut);
   if (token) $('userBadge').textContent = `${role === 'company' ? '🏢' : '👤'} ${name || email}`;
+
+  // Notification & Message toggles
+  $('notifToggleBtn')?.classList.toggle('hidden', loggedOut);
+  $('msgToggleBtn')?.classList.toggle('hidden', loggedOut);
+
+  if (loggedOut) {
+    $('notifDropdown')?.classList.add('hidden');
+    $('chatModal')?.classList.add('hidden');
+    savedJobIdsSet.clear();
+  } else {
+    loadNotifications();
+    loadConversations();
+    if (isCandidate()) fetchSavedJobIds();
+  }
 }
 $('authDropBtn').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -74,13 +113,17 @@ function renderMobileMenu() {
   if (role === 'public') {
     auth = `<div class="dropdown-label">Candidate</div><a href="#/login">Login</a><a href="#/register">Register</a><div class="dropdown-label">Company</div><a href="#/company/login">Company Login</a><a href="#/company/register">Company Register</a>`;
   } else if (role === 'candidate') {
-    auth = `<a href="#/profile">Profile</a><a href="#" id="mLogout">Logout</a>`;
+    auth = `<a href="#/profile">Profile</a><a href="#" id="mNotifs">🔔 Notifications (<span id="mNotifCount">0</span>)</a><a href="#" id="mMessages">💬 Messages (<span id="mMsgCount">0</span>)</a><a href="#" id="mLogout">Logout</a>`;
   } else {
-    auth = `<a href="#/company/dashboard">Dashboard</a><a href="#" id="mLogout">Logout</a>`;
+    auth = `<a href="#/company/dashboard">Dashboard</a><a href="#" id="mNotifs">🔔 Notifications (<span id="mNotifCount">0</span>)</a><a href="#" id="mMessages">💬 Messages (<span id="mMsgCount">0</span>)</a><a href="#" id="mLogout">Logout</a>`;
   }
   $('mobileMenu').innerHTML = links + auth;
   const out = $('mLogout');
   if (out) out.addEventListener('click', (e) => { e.preventDefault(); $('logoutBtn').click(); closeMobileMenu(); });
+  const mNotif = $('mNotifs');
+  if (mNotif) mNotif.addEventListener('click', (e) => { e.preventDefault(); closeMobileMenu(); $('notifToggleBtn')?.click(); });
+  const mMsg = $('mMessages');
+  if (mMsg) mMsg.addEventListener('click', (e) => { e.preventDefault(); closeMobileMenu(); openChatModal(); });
 }
 $('menuBtn').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -95,6 +138,10 @@ document.addEventListener('click', (e) => {
 });
 $('logoutBtn').addEventListener('click', () => {
   ['token', 'role', 'email', 'name'].forEach((k) => localStorage.removeItem(k));
+  savedJobIdsSet.clear();
+  cachedApplications = [];
+  cachedSavedJobs = [];
+  conversationsCache = [];
   renderNav(); toast('Logged out'); location.hash = '#/jobs';
 });
 function loginAs({ token, role, email, name }) {
@@ -196,8 +243,49 @@ $('companyLoginForm').addEventListener('submit', async (e) => {
   } catch (err) { toast(err.message); }
 });
 
-// ---------- job cards ----------
+// ---------- job cards & saved bookmarks ----------
 let page = 1; const limit = 9; let cache = [];
+
+async function fetchSavedJobIds() {
+  if (!isCandidate()) return;
+  try {
+    const res = await api('/api/saved-jobs/ids');
+    savedJobIdsSet.clear();
+    (res.data?.ids || []).forEach((id) => savedJobIdsSet.add(id));
+  } catch (err) {
+    console.warn('Error fetching saved job IDs:', err);
+  }
+}
+
+async function toggleSaveJob(jobId) {
+  if (!isCandidate()) {
+    toast('Login as a candidate to save jobs');
+    location.hash = '#/login';
+    return;
+  }
+  try {
+    const res = await api(`/api/saved-jobs/${jobId}`, { method: 'POST' });
+    const isSaved = res.data?.saved;
+    if (isSaved) {
+      savedJobIdsSet.add(jobId);
+      toast('🔖 Job saved to your bookmarks!');
+    } else {
+      savedJobIdsSet.delete(jobId);
+      toast('Job removed from saved bookmarks');
+    }
+    document.querySelectorAll(`[data-save-job="${jobId}"]`).forEach((btn) => {
+      btn.classList.toggle('saved', isSaved);
+      btn.innerHTML = isSaved ? '❤️ Saved' : '🤍 Save';
+    });
+    // If on applications page, reload tab counts & list
+    if (location.hash === '#/my-applications') {
+      loadApplications();
+    }
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
 function matchBadge(j) {
   return (j.match_percentage != null && j.match_percentage > 0) ? ` <span class="match-badge">${j.match_percentage}% Match</span>` : '';
 }
@@ -208,7 +296,25 @@ function skillsBlock(j) {
   return `<div class="muted">${required.slice(0, 90)}</div>`;
 }
 function jobCard(j) {
-  return `<div class="job-card"><span class="pill">${j.employment_type || ''} • ${j.location || ''}</span><h3>${j.title}${matchBadge(j)}</h3><div class="muted">${j.company}</div>${skillsBlock(j)}<div class="job-actions"><button class="btn btn-ghost" data-details="${j.id}">View Details</button><button class="btn btn-primary" data-apply="${j.id}">Apply</button></div></div>`;
+  const isSaved = savedJobIdsSet.has(j.id);
+  const saveBtn = isCandidate() ? `<button type="button" class="btn-save-toggle ${isSaved ? 'saved' : ''}" data-save-job="${j.id}" title="${isSaved ? 'Remove from saved' : 'Save job'}">${isSaved ? '❤️ Saved' : '🤍 Save'}</button>` : '';
+  const chatBtn = (isCandidate() && j.company_id) ? `<button type="button" class="btn btn-ghost btn-sm" data-chat-job="${j.id}" data-company-id="${j.company_id}" data-company-name="${escapeHtml(j.company)}" title="Chat with hiring team">💬 Chat</button>` : '';
+
+  return `
+    <div class="job-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <span class="pill">${j.employment_type || 'Full-time'} • ${j.location || 'Remote'}</span>
+        ${saveBtn}
+      </div>
+      <h3>${j.title}${matchBadge(j)}</h3>
+      <div class="muted">${j.company}</div>
+      ${skillsBlock(j)}
+      <div class="job-actions">
+        <button type="button" class="btn btn-ghost" data-details="${j.id}">View Details</button>
+        ${chatBtn}
+        <button type="button" class="btn btn-primary" data-apply="${j.id}">Apply</button>
+      </div>
+    </div>`;
 }
 function trackJobs(rows) {
   rows.forEach((j) => { if (!cache.some((c) => c.id === j.id)) cache.push(j); });
@@ -286,13 +392,46 @@ function wireJobButtons(root = document) {
   root.querySelectorAll('[data-apply]').forEach((b) => b.addEventListener('click', () => {
     openApplyModal(b.dataset.apply);
   }));
+  root.querySelectorAll('[data-save-job]').forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSaveJob(b.dataset.saveJob);
+  }));
+  root.querySelectorAll('[data-chat-job]').forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const j = cache.find((x) => x.id === b.dataset.chatJob);
+    openChatModal(b.dataset.companyId, j, { name: b.dataset.companyName });
+  }));
   root.querySelectorAll('[data-details]').forEach((b) => b.addEventListener('click', () => {
     const j = cache.find((x) => x.id === b.dataset.details);
     if (!j) return;
-    $('modalBody').innerHTML = `<span class="pill">${j.employment_type} • ${j.location}</span><h2>${j.title}</h2><p class="muted">${j.company}</p>${j.match_percentage > 0 ? `<p><span class="match-badge">${j.match_percentage}% Match</span> <span class="muted">on ${(j.matched_skills || []).map((s) => `✓ ${s}`).join(' · ')}</span></p>` : ''}<p>${j.description}</p><p><b>Required skills:</b> ${skillList(j.skills).join(', ') || '-'}</p><button class="btn btn-primary" id="modalApply">Apply for this job</button>`;
+    const isSaved = savedJobIdsSet.has(j.id);
+    const saveBtnHtml = isCandidate() ? `<button type="button" class="btn btn-ghost" id="modalSaveBtn">${isSaved ? '❤️ Saved in Bookmarks' : '🤍 Save Job'}</button>` : '';
+    const chatBtnHtml = (isCandidate() && j.company_id) ? `<button type="button" class="btn btn-secondary" id="modalChatBtn">💬 Message Company</button>` : '';
+
+    $('modalBody').innerHTML = `
+      <span class="pill">${j.employment_type || 'Full-time'} • ${j.location || 'Remote'}</span>
+      <h2>${escapeHtml(j.title)}</h2>
+      <p class="muted"><strong>${escapeHtml(j.company)}</strong> ${j.location ? `• 📍 ${escapeHtml(j.location)}` : ''}</p>
+      ${j.match_percentage > 0 ? `<p><span class="match-badge">${j.match_percentage}% Match</span> <span class="muted">on ${(j.matched_skills || []).map((s) => `✓ ${s}`).join(' · ')}</span></p>` : ''}
+      <p style="white-space:pre-line;line-height:1.6;">${escapeHtml(j.description || 'No detailed description provided.')}</p>
+      <p><b>Required skills:</b> ${skillList(j.skills).join(', ') || '-'}</p>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:1.2rem;">
+        <button type="button" class="btn btn-primary" id="modalApply">Apply for this job</button>
+        ${chatBtnHtml}
+        ${saveBtnHtml}
+      </div>`;
     $('jobModal').classList.remove('hidden');
-    $('modalApply').addEventListener('click', () => {
-      openApplyModal(j.id);
+
+    $('modalApply')?.addEventListener('click', () => openApplyModal(j.id));
+    $('modalChatBtn')?.addEventListener('click', () => {
+      $('jobModal').classList.add('hidden');
+      openChatModal(j.company_id, j, { name: j.company });
+    });
+    $('modalSaveBtn')?.addEventListener('click', async () => {
+      await toggleSaveJob(j.id);
+      const nowSaved = savedJobIdsSet.has(j.id);
+      const btn = $('modalSaveBtn');
+      if (btn) btn.textContent = nowSaved ? '❤️ Saved in Bookmarks' : '🤍 Save Job';
     });
   }));
 }
@@ -455,14 +594,219 @@ $('jobLocation')?.addEventListener('change', () => { page = 1; loadJobs(); });
 $('prevPage').addEventListener('click', () => { if (page > 1) { page--; loadJobs(); } });
 $('nextPage').addEventListener('click', () => { page++; loadJobs(); });
 
-// ---------- candidate: applications + profile ----------
-const STATUS_CLASS = { Applied: '', 'Under Review': 'warn', Shortlisted: 'good', Rejected: 'bad' };
+// ---------- candidate: applications & tabs (All, Applied, Interview, Saved, Archived) ----------
+const STATUS_CLASS = {
+  Applied: 'applied',
+  'Under Review': 'warn',
+  Shortlisted: 'good',
+  Interview: 'interview',
+  Archived: 'archived',
+  Rejected: 'bad'
+};
+
 async function loadApplications() {
   try {
-    const res = await api('/api/applications');
-    $('appsList').innerHTML = res.data.length ? res.data.map((a) => `<div class="card"><b>${a.Job?.title}</b> <span class="muted">@ ${a.Job?.company}</span><br/><span class="pill ${STATUS_CLASS[a.status] || ''}">${a.status}</span> <span class="muted">applied ${new Date(a.applied_at).toLocaleString()}</span></div>`).join('') : '<p class="muted">No applications yet. Apply from Jobs.</p>';
-  } catch (err) { toast(err.message); }
+    const [appsRes, savedRes] = await Promise.all([
+      api('/api/applications'),
+      api('/api/saved-jobs').catch(() => ({ data: { jobs: [] } }))
+    ]);
+
+    cachedApplications = appsRes.data || [];
+    cachedSavedJobs = savedRes.data?.jobs || [];
+
+    // Sync saved job IDs
+    cachedSavedJobs.forEach((j) => savedJobIdsSet.add(j.id));
+
+    // Calculate tab badge counts
+    const countApplied = cachedApplications.filter((a) => a.status === 'Applied' || a.status === 'Under Review').length;
+    const countInterview = cachedApplications.filter((a) => a.status === 'Interview' || a.status === 'Shortlisted').length;
+    const countSaved = cachedSavedJobs.length;
+    const countArchived = cachedApplications.filter((a) => a.status === 'Archived' || a.status === 'Rejected').length;
+    const countAll = cachedApplications.length + countSaved;
+
+    if ($('countTabAll')) $('countTabAll').textContent = countAll;
+    if ($('countTabApplied')) $('countTabApplied').textContent = countApplied;
+    if ($('countTabInterview')) $('countTabInterview').textContent = countInterview;
+    if ($('countTabSaved')) $('countTabSaved').textContent = countSaved;
+    if ($('countTabArchived')) $('countTabArchived').textContent = countArchived;
+
+    renderApplications();
+  } catch (err) {
+    toast(err.message);
+  }
 }
+
+function renderApplicationCard(a) {
+  const j = a.Job || {};
+  const comp = j.Company || {};
+  const compName = j.company || comp.company_name || 'Hiring Team';
+  const isArchived = a.status === 'Archived';
+  const statusClass = STATUS_CLASS[a.status] || 'applied';
+  const resumeLabel = a.resume_type === 'custom' ? 'Custom Uploaded Resume' : '🌟 HireFlow Profile Resume';
+
+  return `
+    <div class="app-item-card" data-app-id="${a.id}">
+      <div class="app-item-top">
+        <div class="app-title-group">
+          <h3>${escapeHtml(j.title || 'Position')}</h3>
+          <div class="app-company-meta">
+            <span>🏢 <strong>${escapeHtml(compName)}</strong></span>
+            ${j.location ? `<span>📍 ${escapeHtml(j.location)}</span>` : ''}
+            ${j.employment_type ? `<span>• ${j.employment_type}</span>` : ''}
+          </div>
+        </div>
+        <span class="pill ${statusClass}">${a.status}</span>
+      </div>
+
+      <div class="app-details-row">
+        <span>📅 Applied: <strong>${new Date(a.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong></span>
+        <span>📄 Resume: ${a.resume_url ? `<a href="${a.resume_url}" target="_blank"><u>${resumeLabel}</u></a>` : `<span>${resumeLabel}</span>`}</span>
+        ${a.note ? `<span class="span-all muted">💬 Note: ${escapeHtml(a.note)}</span>` : ''}
+      </div>
+
+      <div class="app-actions-footer">
+        <div class="app-btn-group">
+          ${j.company_id ? `<button type="button" class="btn btn-secondary btn-sm" data-chat-company="${j.company_id}" data-job-id="${j.id}" data-company-name="${escapeHtml(compName)}">💬 Message Company</button>` : ''}
+          <button type="button" class="btn btn-ghost btn-sm" data-archive-app="${a.id}">${isArchived ? '↩️ Move to Active' : '📁 Archive'}</button>
+          <button type="button" class="btn-save-toggle ${savedJobIdsSet.has(j.id) ? 'saved' : ''}" data-save-job="${j.id}">${savedJobIdsSet.has(j.id) ? '❤️ Saved' : '🤍 Save'}</button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-details="${j.id}">View Job Details</button>
+      </div>
+    </div>`;
+}
+
+function renderSavedJobCard(j) {
+  const isApplied = cachedApplications.some((a) => a.job_id === j.id);
+  const statusPill = isApplied ? '<span class="pill good">Applied ✓</span>' : '<span class="pill saved">Saved Bookmark</span>';
+  const compName = j.company || j.Company?.company_name || 'Hiring Team';
+
+  return `
+    <div class="app-item-card" data-job-id="${j.id}">
+      <div class="app-item-top">
+        <div class="app-title-group">
+          <h3>${escapeHtml(j.title)}</h3>
+          <div class="app-company-meta">
+            <span>🏢 <strong>${escapeHtml(compName)}</strong></span>
+            <span>📍 ${escapeHtml(j.location || 'Remote')}</span>
+            <span>• ${j.employment_type || 'Full-time'}</span>
+          </div>
+        </div>
+        ${statusPill}
+      </div>
+
+      <div class="app-details-row">
+        <span>Skills: ${skillList(j.skills).slice(0, 6).join(', ') || 'General'}</span>
+      </div>
+
+      <div class="app-actions-footer">
+        <div class="app-btn-group">
+          ${!isApplied ? `<button type="button" class="btn btn-primary btn-sm" data-apply="${j.id}">⚡ Apply Now</button>` : `<span class="muted font-xs">Application Submitted ✓</span>`}
+          ${(j.company_id || j.Company?.id) ? `<button type="button" class="btn btn-secondary btn-sm" data-chat-company="${j.company_id || j.Company?.id}" data-job-id="${j.id}" data-company-name="${escapeHtml(compName)}">💬 Message Company</button>` : ''}
+          <button type="button" class="btn btn-danger btn-sm" data-remove-saved="${j.id}">🗑️ Remove from Saved</button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-details="${j.id}">View Details</button>
+      </div>
+    </div>`;
+}
+
+function renderApplications() {
+  const container = $('appsList');
+  if (!container) return;
+
+  // Track active tab styling
+  document.querySelectorAll('.app-tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.tab === currentAppTab);
+    btn.setAttribute('aria-selected', String(btn.dataset.tab === currentAppTab));
+  });
+
+  if (currentAppTab === 'saved') {
+    if (!cachedSavedJobs.length) {
+      container.innerHTML = `
+        <div class="card empty-dashboard-card" style="text-align:center;padding:2.5rem 1rem;">
+          <div style="font-size:2.5rem;margin-bottom:0.5rem;">🔖</div>
+          <h3>No Saved Jobs Yet</h3>
+          <p class="muted">Click the heart/save button on any job listing to save it here for later.</p>
+          <a class="btn btn-primary mt-3" href="#/jobs">Browse Jobs</a>
+        </div>`;
+      return;
+    }
+    container.innerHTML = cachedSavedJobs.map(renderSavedJobCard).join('');
+    wireApplicationListButtons();
+    return;
+  }
+
+  let list = cachedApplications;
+  if (currentAppTab === 'applied') {
+    list = list.filter((a) => a.status === 'Applied' || a.status === 'Under Review');
+  } else if (currentAppTab === 'interview') {
+    list = list.filter((a) => a.status === 'Interview' || a.status === 'Shortlisted');
+  } else if (currentAppTab === 'archived') {
+    list = list.filter((a) => a.status === 'Archived' || a.status === 'Rejected');
+  }
+
+  if (!list.length) {
+    const tabLabels = {
+      all: 'applications',
+      applied: 'active applied applications',
+      interview: 'shortlisted or interview invitations',
+      archived: 'archived applications'
+    };
+    container.innerHTML = `
+      <div class="card empty-dashboard-card" style="text-align:center;padding:2.5rem 1rem;">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem;">📋</div>
+        <h3>No ${tabLabels[currentAppTab] || 'applications'} found</h3>
+        <p class="muted">Explore open positions and apply with your verified HireFlow resume.</p>
+        <a class="btn btn-primary mt-3" href="#/jobs">Browse Jobs</a>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(renderApplicationCard).join('');
+  wireApplicationListButtons();
+}
+
+function wireApplicationListButtons() {
+  const container = $('appsList');
+  if (!container) return;
+
+  // Archive toggle
+  container.querySelectorAll('[data-archive-app]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        const res = await api(`/api/applications/${btn.dataset.archiveApp}/archive`, { method: 'PUT' });
+        toast(res.message || 'Status updated');
+        loadApplications();
+      } catch (err) {
+        toast(err.message);
+      }
+    });
+  });
+
+  // Remove saved
+  container.querySelectorAll('[data-remove-saved]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      await toggleSaveJob(btn.dataset.removeSaved);
+    });
+  });
+
+  // Message company
+  container.querySelectorAll('[data-chat-company]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openChatModal(btn.dataset.chatCompany, { id: btn.dataset.jobId }, { name: btn.dataset.companyName });
+    });
+  });
+
+  // Generic job buttons (apply, save, details)
+  wireJobButtons(container);
+}
+
+// Wire Application Tab navigation clicks
+document.querySelectorAll('.app-tab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    currentAppTab = btn.dataset.tab;
+    renderApplications();
+  });
+});
 
 async function loadProfile() {
   try {
@@ -800,35 +1144,41 @@ function renderCompanyApps() {
   const jf = $('appJobFilter').value, sf = $('appStatusFilter').value;
   const rows = coAppsCache.filter((a) => (!jf || a.job?.id === jf) && (!sf || a.status === sf));
   $('companyAppsList').innerHTML = rows.length ? rows.map((a) => {
-    const resumeLabel = a.resume_type === 'custom' ? 'Custom Uploaded Resume' : 'HireFlow Profile Resume';
+    const resumeLabel = a.resume_type === 'custom' ? 'Custom Uploaded Resume' : '🌟 HireFlow Profile Resume';
     const skills = skillList(a.candidate?.skills);
     return `
       <div class="card">
         <div class="card-top">
           <div>
-            <b>${a.candidate?.name || 'Applicant'}</b>
-            <span class="muted font-xs"> (${a.candidate?.email || ''})</span>
+            <b>${escapeHtml(a.candidate?.name || 'Applicant')}</b>
+            <span class="muted font-xs"> (${escapeHtml(a.candidate?.email || '')})</span>
           </div>
           <span class="pill ${STATUS_CLASS[a.status] || ''}">${a.status}</span>
         </div>
-        <div class="muted mt-2">Applied for <b>${a.job?.title}</b> • ${new Date(a.applied_at).toLocaleString()}</div>
-        ${a.note ? `<div class="mt-2 font-xs muted"><b>Note:</b> ${a.note}</div>` : ''}
-        ${skills.length ? `<div class="card-skills mt-2">${skills.slice(0, 6).map((s) => `<span class="skill-tag">${s}</span>`).join('')}</div>` : ''}
+        <div class="muted mt-2">Applied for <b>${escapeHtml(a.job?.title || '')}</b> • ${new Date(a.applied_at).toLocaleString()}</div>
+        ${a.note ? `<div class="mt-2 font-xs muted"><b>Note:</b> ${escapeHtml(a.note)}</div>` : ''}
+        ${skills.length ? `<div class="card-skills mt-2">${skills.slice(0, 6).map((s) => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
         <div class="card-footer mt-3">
           <div>
             ${a.resume_url
               ? `<a href="${a.resume_url}" target="_blank" class="btn btn-sm">📄 ${resumeLabel}</a>`
               : '<span class="muted font-xs">No resume document attached</span>'}
           </div>
-          <div class="job-actions">
+          <div class="job-actions" style="flex-wrap:wrap;">
+            ${a.candidate?.id ? `<button type="button" class="btn btn-secondary btn-sm" data-chat-candidate="${a.candidate.id}" data-candidate-name="${escapeHtml(a.candidate.name)}" data-job-id="${a.job?.id || ''}">💬 Message Candidate</button>` : ''}
             <select data-status="${a.id}">
-              ${['Applied', 'Under Review', 'Shortlisted', 'Rejected'].map((s) => `<option ${s === a.status ? 'selected' : ''}>${s}</option>`).join('')}
+              ${['Applied', 'Under Review', 'Shortlisted', 'Interview', 'Rejected', 'Archived'].map((s) => `<option ${s === a.status ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>
         </div>
       </div>`;
   }).join('')
     : '<p class="muted">No applications found.</p>';
+
+  document.querySelectorAll('[data-chat-candidate]').forEach((btn) => btn.addEventListener('click', () => {
+    openChatModal(btn.dataset.chatCandidate, { id: btn.dataset.jobId }, { name: btn.dataset.candidateName });
+  }));
+
   document.querySelectorAll('[data-status]').forEach((sel) => sel.addEventListener('change', async () => {
     try {
       await api(`/api/company/applications/${sel.dataset.status}/status`, { method: 'PUT', body: JSON.stringify({ status: sel.value }) });
@@ -841,6 +1191,290 @@ function renderCompanyApps() {
 }
 $('appJobFilter').addEventListener('change', renderCompanyApps);
 $('appStatusFilter').addEventListener('change', renderCompanyApps);
+
+// ==========================================================================
+// Direct Messaging & Real-Time Chat Management
+// ==========================================================================
+let activeThreadOtherId = null;
+let activeThreadJobId = null;
+let activeThreadOtherParty = null;
+let conversationsCache = [];
+
+async function loadConversations() {
+  if (!session().token) return;
+  try {
+    const res = await api('/api/messages/conversations');
+    conversationsCache = res.data?.conversations || [];
+    const totalUnread = res.data?.total_unread || 0;
+
+    const badge = $('msgBadge');
+    if (badge) {
+      badge.textContent = totalUnread > 9 ? '9+' : totalUnread;
+      badge.classList.toggle('hidden', totalUnread === 0);
+    }
+    const mMsgCount = $('mMsgCount');
+    if (mMsgCount) mMsgCount.textContent = totalUnread;
+
+    renderConversationsList();
+  } catch (err) {
+    console.warn('Error loading conversations:', err);
+  }
+}
+
+function renderConversationsList() {
+  const listEl = $('chatConversationsList');
+  if (!listEl) return;
+  const kw = ($('chatSearchInput')?.value || '').trim().toLowerCase();
+  let list = conversationsCache;
+  if (kw) {
+    list = list.filter((c) => `${c.party?.name || ''} ${c.lastMessage || ''} ${c.job?.title || ''}`.toLowerCase().includes(kw));
+  }
+
+  if (!list.length) {
+    listEl.innerHTML = `<div class="chat-empty-conversations">${kw ? 'No conversations match search.' : 'No conversations yet.<br/><span class="font-xs muted">Start chatting from any job or application.</span>'}</div>`;
+    return;
+  }
+
+  listEl.innerHTML = list.map((c) => {
+    const name = c.party?.name || (c.otherType === 'company' ? 'Company' : 'Candidate');
+    const avatarLetter = (name[0] || '?').toUpperCase();
+    const isActive = activeThreadOtherId === c.otherId;
+    const timeStr = timeAgo(c.lastMessageAt);
+    const unread = c.unreadCount > 0 ? `<span class="chat-conv-unread">${c.unreadCount}</span>` : '';
+    const jobTag = c.job ? `<span class="pill font-xs" style="font-size:0.68rem;padding:0.05rem 0.45rem;">${escapeHtml(c.job.title)}</span>` : '';
+
+    return `
+      <div class="chat-conv-item ${isActive ? 'active' : ''}" data-conv-id="${c.otherId}">
+        <div class="chat-avatar">${avatarLetter}</div>
+        <div class="chat-conv-info">
+          <div class="chat-conv-name-row">
+            <span class="chat-conv-name">${escapeHtml(name)}</span>
+            <span class="chat-conv-time">${timeStr}</span>
+          </div>
+          <div class="chat-conv-last-msg">
+            <span>${c.lastMessage ? (c.lastMessage.length > 28 ? escapeHtml(c.lastMessage.slice(0, 28)) + '...' : escapeHtml(c.lastMessage)) : 'New conversation'}</span>
+            ${unread}
+          </div>
+          ${jobTag ? `<div style="margin-top:0.25rem;">${jobTag}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('[data-conv-id]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const conv = conversationsCache.find((c) => c.otherId === el.dataset.convId);
+      openThread(el.dataset.convId, conv?.party, conv?.job);
+    });
+  });
+}
+
+async function openChatModal(otherId = null, job = null, initialParty = null) {
+  if (!session().token) {
+    toast('Please log in to use chat');
+    location.hash = '#/login';
+    return;
+  }
+  $('chatModal')?.classList.remove('hidden');
+  await loadConversations();
+  if (otherId) {
+    openThread(otherId, initialParty, job);
+  }
+}
+
+async function openThread(otherId, partyInfo = null, job = null) {
+  activeThreadOtherId = otherId;
+  if (job) activeThreadJobId = job.id;
+  activeThreadOtherParty = partyInfo;
+
+  renderConversationsList();
+
+  const partyName = partyInfo?.name || (isCandidate() ? 'Company Team' : 'Applicant');
+  $('chatActiveName').textContent = partyName;
+  $('chatActiveAvatar').textContent = (partyName[0] || '?').toUpperCase();
+  $('chatActiveSubtitle').textContent = job ? `Regarding: ${job.title}` : (partyInfo?.email || 'Active discussion');
+
+  $('chatSendForm')?.classList.remove('hidden');
+  $('chatThreadContainer')?.classList.add('active-mobile');
+  $('chatSidebar')?.classList.add('inactive-mobile');
+
+  await refreshThreadMessages();
+  setTimeout(() => $('chatMsgInput')?.focus(), 100);
+}
+
+async function refreshThreadMessages() {
+  if (!activeThreadOtherId) return;
+  try {
+    const res = await api(`/api/messages/thread/${activeThreadOtherId}`);
+    const messages = res.data?.messages || [];
+    const other = res.data?.otherParty;
+    if (other && !activeThreadOtherParty) {
+      activeThreadOtherParty = other;
+      $('chatActiveName').textContent = other.name;
+      $('chatActiveAvatar').textContent = (other.name[0] || '?').toUpperCase();
+    }
+
+    const role = session().role;
+    const bodyEl = $('chatMessagesBody');
+    if (!messages.length) {
+      bodyEl.innerHTML = `<div class="chat-placeholder-state"><div class="chat-placeholder-icon">👋</div><h4>Say Hello!</h4><p class="muted">Send a message to start this conversation.</p></div>`;
+      return;
+    }
+
+    bodyEl.innerHTML = messages.map((m) => {
+      const isOutgoing = m.sender_type === role;
+      const timeStr = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `
+        <div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}">
+          <div class="chat-bubble">${escapeHtml(m.content)}</div>
+          <span class="chat-time">${timeStr}</span>
+        </div>`;
+    }).join('');
+
+    bodyEl.scrollTop = bodyEl.scrollHeight;
+    loadConversations();
+  } catch (err) {
+    console.warn('Error loading thread:', err);
+  }
+}
+
+async function sendChatMessage(content) {
+  if (!content || !content.trim() || !activeThreadOtherId) return;
+  const text = content.trim();
+  $('chatMsgInput').value = '';
+
+  // Optimistic message append
+  const bodyEl = $('chatMessagesBody');
+  const tempRow = document.createElement('div');
+  tempRow.className = 'chat-msg-row outgoing';
+  tempRow.innerHTML = `<div class="chat-bubble">${escapeHtml(text)}</div><span class="chat-time">Just now</span>`;
+  bodyEl.appendChild(tempRow);
+  bodyEl.scrollTop = bodyEl.scrollHeight;
+
+  try {
+    await api('/api/messages', {
+      method: 'POST',
+      body: JSON.stringify({
+        recipient_id: activeThreadOtherId,
+        content: text,
+        job_id: activeThreadJobId || undefined
+      })
+    });
+    refreshThreadMessages();
+  } catch (err) {
+    toast('Failed to send message: ' + err.message);
+  }
+}
+
+// Wire Chat Modal events
+$('chatModalClose')?.addEventListener('click', () => $('chatModal')?.classList.add('hidden'));
+$('chatCloseThreadBtn')?.addEventListener('click', () => $('chatModal')?.classList.add('hidden'));
+$('chatBackBtn')?.addEventListener('click', () => {
+  $('chatThreadContainer')?.classList.remove('active-mobile');
+  $('chatSidebar')?.classList.remove('inactive-mobile');
+});
+$('chatSearchInput')?.addEventListener('input', () => renderConversationsList());
+$('chatSendForm')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  sendChatMessage($('chatMsgInput')?.value);
+});
+$('msgToggleBtn')?.addEventListener('click', () => openChatModal());
+
+// ==========================================================================
+// Notifications System
+// ==========================================================================
+async function loadNotifications() {
+  if (!session().token) return;
+  try {
+    const res = await api('/api/notifications');
+    const notifs = res.data?.notifications || [];
+    const unreadCount = res.data?.unread_count || 0;
+
+    const badge = $('notifBadge');
+    if (badge) {
+      badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      badge.classList.toggle('hidden', unreadCount === 0);
+    }
+    const mNotifCount = $('mNotifCount');
+    if (mNotifCount) mNotifCount.textContent = unreadCount;
+
+    const listEl = $('notifList');
+    if (!listEl) return;
+
+    if (!notifs.length) {
+      listEl.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+      return;
+    }
+
+    listEl.innerHTML = notifs.map((n) => {
+      const icon = n.type === 'message' ? '💬' : n.type === 'status_change' ? '📢' : n.type === 'application' ? '📄' : '🔔';
+      return `
+        <div class="notif-item ${n.is_read ? '' : 'unread'}" data-notif-id="${n.id}" data-link="${n.link || ''}">
+          <div class="notif-icon-circle">${icon}</div>
+          <div class="notif-content">
+            <div class="notif-title">${escapeHtml(n.title)}</div>
+            <div class="notif-desc">${escapeHtml(n.message)}</div>
+            <div class="notif-time">${timeAgo(n.created_at)}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('[data-notif-id]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        const id = el.dataset.notifId;
+        const link = el.dataset.link;
+        await api(`/api/notifications/${id}/read`, { method: 'PUT' }).catch(() => {});
+        $('notifDropdown')?.classList.add('hidden');
+        loadNotifications();
+        if (link === '#/chat') {
+          openChatModal();
+        } else if (link) {
+          location.hash = link;
+        }
+      });
+    });
+  } catch (err) {
+    console.warn('Error loading notifications:', err);
+  }
+}
+
+$('notifToggleBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const dropdown = $('notifDropdown');
+  if (dropdown) dropdown.classList.toggle('hidden');
+});
+$('notifMarkAllRead')?.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  try {
+    await api('/api/notifications/read-all', { method: 'PUT' });
+    toast('All notifications marked as read');
+    loadNotifications();
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+// Close dropdown or modal when clicking outside
+document.addEventListener('click', (e) => {
+  const notifWrap = $('notifWrap');
+  if (notifWrap && !notifWrap.contains(e.target)) {
+    $('notifDropdown')?.classList.add('hidden');
+  }
+  const chatModal = $('chatModal');
+  if (chatModal && e.target === chatModal) {
+    chatModal.classList.add('hidden');
+  }
+});
+
+// Real-time Background Poller (every 10 seconds)
+setInterval(() => {
+  if (session().token) {
+    loadNotifications();
+    loadConversations();
+    if ($('chatModal') && !$('chatModal').classList.contains('hidden') && activeThreadOtherId) {
+      refreshThreadMessages();
+    }
+  }
+}, 10000);
 
 // ---------- init ----------
 wirePasswordToggles();

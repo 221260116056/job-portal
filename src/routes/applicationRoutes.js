@@ -7,4 +7,5 @@ router.use(requireCandidate);
 router.post('/', [body('job_id').isUUID().withMessage('job_id must be a valid job UUID')], validate, controller.create);
 router.get('/', controller.list);
 router.get('/:id', [param('id').isUUID().withMessage('Application ID must be a valid UUID')], validate, controller.get);
+router.put('/:id/archive', [param('id').isUUID().withMessage('Application ID must be a valid UUID')], validate, controller.archive);
 module.exports = router;
