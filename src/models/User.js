@@ -9,6 +9,7 @@ const User = sequelize.define('User', {
   resume_url: { type: DataTypes.STRING(500), allowNull: true },
   skills: { type: DataTypes.JSONB, allowNull: true, defaultValue: [] },
   resume_text: { type: DataTypes.TEXT, allowNull: true },
+  resume_data: { type: DataTypes.JSONB, allowNull: true, defaultValue: {} },
   is_suspended: { type: DataTypes.BOOLEAN, defaultValue: false, allowNull: false }
 }, { tableName: 'users', underscored: true, defaultScope: { attributes: { exclude: ['password'] } } });
 

@@ -370,25 +370,343 @@ async function getCandidateProfile() {
   } catch { return null; }
 }
 
-async function showHireFlowResumeModal(customUser = null) {
+let currentResumeProfile = null;
+
+function renderHireFlowResumeView(profile) {
+  currentResumeProfile = profile;
+  const rd = profile.resume_data || {};
+
+  if ($('hfResumeName')) $('hfResumeName').textContent = profile.name || 'Candidate';
+  const headlineEl = $('hfResumeHeadline');
+  if (headlineEl) {
+    headlineEl.textContent = rd.headline || (skillList(profile.skills).length ? `${skillList(profile.skills).slice(0, 3).join(' • ')} Specialist` : 'Candidate Profile');
+  }
+
+  if ($('hfResumeEmail')) $('hfResumeEmail').textContent = profile.email || '';
+
+  // Phone & Location
+  const phoneEl = $('hfResumePhone');
+  if (phoneEl) {
+    if (rd.phone) {
+      phoneEl.textContent = `📱 ${rd.phone}`;
+      phoneEl.classList.remove('hidden');
+    } else {
+      phoneEl.classList.add('hidden');
+    }
+  }
+
+  const locEl = $('hfResumeLocation');
+  if (locEl) {
+    if (rd.location) {
+      locEl.textContent = `📍 ${rd.location}`;
+      locEl.classList.remove('hidden');
+    } else {
+      locEl.classList.add('hidden');
+    }
+  }
+
+  // Links
+  const webEl = $('hfResumeWebsite');
+  if (webEl) {
+    if (rd.website) {
+      webEl.href = rd.website.startsWith('http') ? rd.website : `https://${rd.website}`;
+      webEl.classList.remove('hidden');
+    } else {
+      webEl.classList.add('hidden');
+    }
+  }
+
+  const liEl = $('hfResumeLinkedIn');
+  if (liEl) {
+    if (rd.linkedin) {
+      liEl.href = rd.linkedin.startsWith('http') ? rd.linkedin : `https://${rd.linkedin}`;
+      liEl.classList.remove('hidden');
+    } else {
+      liEl.classList.add('hidden');
+    }
+  }
+
+  const ghEl = $('hfResumeGitHub');
+  if (ghEl) {
+    if (rd.github) {
+      ghEl.href = rd.github.startsWith('http') ? rd.github : `https://${rd.github}`;
+      ghEl.classList.remove('hidden');
+    } else {
+      ghEl.classList.add('hidden');
+    }
+  }
+
+  // Summary
+  if ($('hfResumeSummary')) {
+    $('hfResumeSummary').textContent = rd.summary || 'Enthusiastic and motivated candidate applying through HireFlow. Ready to contribute technical expertise and achieve results.';
+  }
+
+  // Skills
+  const skills = skillList(profile.skills);
+  if ($('hfResumeSkills')) {
+    $('hfResumeSkills').innerHTML = skills.length
+      ? skills.map((s) => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')
+      : '<span class="muted font-xs">No technical skills detected yet. Upload a resume or click "Edit Resume" to add skills.</span>';
+  }
+
+  // Work Experience
+  const expListEl = $('hfResumeExpList');
+  if (expListEl) {
+    const exps = Array.isArray(rd.experience) ? rd.experience : [];
+    if (!exps.length) {
+      expListEl.innerHTML = '<span class="muted font-xs">No experience added yet. Click "Edit Resume" to add your roles or internships.</span>';
+    } else {
+      expListEl.innerHTML = exps.map((x) => `
+        <div class="hf-item-card">
+          <div class="hf-item-title-row">
+            <strong>${escapeHtml(x.title || 'Role')}</strong>
+            <span class="hf-item-date">${escapeHtml(x.startDate || '')} ${x.endDate ? '– ' + escapeHtml(x.endDate) : ''}</span>
+          </div>
+          <div class="hf-item-sub">${escapeHtml(x.company || '')} ${x.location ? '• ' + escapeHtml(x.location) : ''}</div>
+          ${x.description ? `<div class="hf-item-desc">${escapeHtml(x.description)}</div>` : ''}
+        </div>`).join('');
+    }
+  }
+
+  // Education
+  const eduListEl = $('hfResumeEduList');
+  if (eduListEl) {
+    const edus = Array.isArray(rd.education) ? rd.education : [];
+    if (!edus.length) {
+      eduListEl.innerHTML = '<span class="muted font-xs">No education details added yet. Click "Edit Resume" to add degree or university.</span>';
+    } else {
+      eduListEl.innerHTML = edus.map((e) => `
+        <div class="hf-item-card">
+          <div class="hf-item-title-row">
+            <strong>${escapeHtml(e.degree || 'Degree / Field')}</strong>
+            <span class="hf-item-date">${escapeHtml(e.year || '')}</span>
+          </div>
+          <div class="hf-item-sub">${escapeHtml(e.institution || '')} ${e.grade ? '• ' + escapeHtml(e.grade) : ''}</div>
+        </div>`).join('');
+    }
+  }
+
+  // Projects
+  const projListEl = $('hfResumeProjList');
+  if (projListEl) {
+    const projs = Array.isArray(rd.projects) ? rd.projects : [];
+    if (!projs.length) {
+      projListEl.innerHTML = '<span class="muted font-xs">No projects added yet. Click "Edit Resume" to showcase your projects.</span>';
+    } else {
+      projListEl.innerHTML = projs.map((p) => `
+        <div class="hf-proj-card">
+          <div class="hf-proj-title">
+            <strong>${escapeHtml(p.title || 'Project')}</strong>
+            ${p.link ? `<a href="${p.link.startsWith('http') ? p.link : 'https://' + p.link}" target="_blank" rel="noopener">🔗 Link</a>` : ''}
+          </div>
+          ${p.techStack ? `<div class="hf-proj-stack">Tech: ${escapeHtml(p.techStack)}</div>` : ''}
+          ${p.description ? `<div class="hf-item-desc">${escapeHtml(p.description)}</div>` : ''}
+        </div>`).join('');
+    }
+  }
+
+  // Certifications
+  const certListEl = $('hfResumeCertList');
+  if (certListEl) {
+    const certs = Array.isArray(rd.certifications) ? rd.certifications : [];
+    if (!certs.length) {
+      certListEl.innerHTML = '<span class="muted font-xs">No certifications added yet.</span>';
+    } else {
+      certListEl.innerHTML = certs.map((c) => `
+        <div class="hf-cert-item">
+          <div>
+            <strong>${escapeHtml(c.name || 'Certification')}</strong>
+            ${c.issuer ? `<span class="muted font-xs"> • ${escapeHtml(c.issuer)}</span>` : ''}
+          </div>
+          <span class="hf-item-date">${escapeHtml(c.year || '')}</span>
+        </div>`).join('');
+    }
+  }
+
+  // Original Document Link
+  const docLinkEl = $('hfResumeDocLink');
+  if (docLinkEl) {
+    if (profile.resume_url) {
+      docLinkEl.innerHTML = `<a href="${profile.resume_url}" target="_blank" class="btn btn-ghost btn-sm">📄 View Original Uploaded Document</a>`;
+    } else {
+      docLinkEl.textContent = 'No original document uploaded yet.';
+    }
+  }
+}
+
+function switchHireFlowModalMode(mode) {
+  const isEdit = mode === 'edit';
+  $('hfPreviewMode')?.classList.toggle('hidden', isEdit);
+  $('hfEditResumeForm')?.classList.toggle('hidden', !isEdit);
+  $('btnEditHireFlowResume')?.classList.toggle('hidden', isEdit);
+  $('btnQuickEditResume')?.classList.toggle('hidden', isEdit);
+  $('btnPreviewModeHireFlowResume')?.classList.toggle('hidden', !isEdit);
+  $('hfViewModalActions')?.classList.toggle('hidden', isEdit);
+
+  if (isCompany()) {
+    $('btnEditHireFlowResume')?.classList.add('hidden');
+    $('btnQuickEditResume')?.classList.add('hidden');
+  }
+}
+
+function createExpItemEl(data = {}) {
+  const div = document.createElement('div');
+  div.className = 'hf-repeater-item';
+  div.innerHTML = `
+    <div class="hf-repeater-item-header">
+      <strong>Role / Position</strong>
+      <button type="button" class="hf-btn-remove" title="Remove">✕ Remove</button>
+    </div>
+    <div class="grid-2">
+      <label>Job Title / Role
+        <input type="text" class="exp-title" placeholder="e.g. Software Developer Intern" value="${escapeHtml(data.title || '')}" />
+      </label>
+      <label>Company / Organization
+        <input type="text" class="exp-company" placeholder="e.g. Google or Tech Corp" value="${escapeHtml(data.company || '')}" />
+      </label>
+      <label>Location
+        <input type="text" class="exp-location" placeholder="e.g. Ahmedabad or Remote" value="${escapeHtml(data.location || '')}" />
+      </label>
+      <label>Duration / Dates
+        <div style="display:flex;gap:0.4rem;">
+          <input type="text" class="exp-start" placeholder="e.g. Jun 2023" value="${escapeHtml(data.startDate || '')}" />
+          <input type="text" class="exp-end" placeholder="e.g. Present" value="${escapeHtml(data.endDate || '')}" />
+        </div>
+      </label>
+      <label class="span-2">Responsibilities & Key Achievements
+        <textarea class="exp-desc" rows="2" placeholder="Key contributions, projects delivered, or technologies used...">${escapeHtml(data.description || '')}</textarea>
+      </label>
+    </div>`;
+  div.querySelector('.hf-btn-remove')?.addEventListener('click', () => div.remove());
+  return div;
+}
+
+function createEduItemEl(data = {}) {
+  const div = document.createElement('div');
+  div.className = 'hf-repeater-item';
+  div.innerHTML = `
+    <div class="hf-repeater-item-header">
+      <strong>Degree / Academic Qualification</strong>
+      <button type="button" class="hf-btn-remove" title="Remove">✕ Remove</button>
+    </div>
+    <div class="grid-2">
+      <label>Degree / Qualification
+        <input type="text" class="edu-degree" placeholder="e.g. B.Tech in Computer Engineering" value="${escapeHtml(data.degree || '')}" />
+      </label>
+      <label>College / University / School
+        <input type="text" class="edu-inst" placeholder="e.g. Gujarat Technological University" value="${escapeHtml(data.institution || '')}" />
+      </label>
+      <label>Passing Year
+        <input type="text" class="edu-year" placeholder="e.g. 2024" value="${escapeHtml(data.year || '')}" />
+      </label>
+      <label>Grade / CGPA / Percentage
+        <input type="text" class="edu-grade" placeholder="e.g. 8.5 CGPA" value="${escapeHtml(data.grade || '')}" />
+      </label>
+    </div>`;
+  div.querySelector('.hf-btn-remove')?.addEventListener('click', () => div.remove());
+  return div;
+}
+
+function createProjItemEl(data = {}) {
+  const div = document.createElement('div');
+  div.className = 'hf-repeater-item';
+  div.innerHTML = `
+    <div class="hf-repeater-item-header">
+      <strong>Key Project</strong>
+      <button type="button" class="hf-btn-remove" title="Remove">✕ Remove</button>
+    </div>
+    <div class="grid-2">
+      <label>Project Title
+        <input type="text" class="proj-title" placeholder="e.g. HireFlow Job Portal" value="${escapeHtml(data.title || '')}" />
+      </label>
+      <label>Technologies Used
+        <input type="text" class="proj-tech" placeholder="e.g. Node.js, Express, React, PostgreSQL" value="${escapeHtml(data.techStack || '')}" />
+      </label>
+      <label class="span-2">Live Demo / GitHub Link
+        <input type="url" class="proj-link" placeholder="https://github.com/vraj/hireflow" value="${escapeHtml(data.link || '')}" />
+      </label>
+      <label class="span-2">Project Description
+        <textarea class="proj-desc" rows="2" placeholder="Key features, user impact, architecture...">${escapeHtml(data.description || '')}</textarea>
+      </label>
+    </div>`;
+  div.querySelector('.hf-btn-remove')?.addEventListener('click', () => div.remove());
+  return div;
+}
+
+function createCertItemEl(data = {}) {
+  const div = document.createElement('div');
+  div.className = 'hf-repeater-item';
+  div.innerHTML = `
+    <div class="hf-repeater-item-header">
+      <strong>Certification</strong>
+      <button type="button" class="hf-btn-remove" title="Remove">✕ Remove</button>
+    </div>
+    <div class="grid-2">
+      <label>Certificate / Course Name
+        <input type="text" class="cert-name" placeholder="e.g. Meta Full Stack Developer Professional" value="${escapeHtml(data.name || '')}" />
+      </label>
+      <label>Issuing Organization
+        <input type="text" class="cert-issuer" placeholder="e.g. Coursera, Meta, AWS" value="${escapeHtml(data.issuer || '')}" />
+      </label>
+      <label class="span-2">Year / Date
+        <input type="text" class="cert-year" placeholder="e.g. 2024" value="${escapeHtml(data.year || '')}" />
+      </label>
+    </div>`;
+  div.querySelector('.hf-btn-remove')?.addEventListener('click', () => div.remove());
+  return div;
+}
+
+function populateHireFlowResumeForm(profile) {
+  const rd = profile.resume_data || {};
+  if ($('hfEditNameInput')) $('hfEditNameInput').value = profile.name || '';
+  if ($('hfEditHeadlineInput')) $('hfEditHeadlineInput').value = rd.headline || '';
+  if ($('hfEditPhoneInput')) $('hfEditPhoneInput').value = rd.phone || '';
+  if ($('hfEditLocationInput')) $('hfEditLocationInput').value = rd.location || '';
+  if ($('hfEditWebsiteInput')) $('hfEditWebsiteInput').value = rd.website || '';
+  if ($('hfEditLinkedInInput')) $('hfEditLinkedInInput').value = rd.linkedin || '';
+  if ($('hfEditGitHubInput')) $('hfEditGitHubInput').value = rd.github || '';
+  if ($('hfEditSummaryInput')) $('hfEditSummaryInput').value = rd.summary || '';
+  if ($('hfEditSkillsInput')) $('hfEditSkillsInput').value = skillList(profile.skills).join(', ');
+
+  // Repeater containers
+  const expBox = $('hfEditExpItems');
+  if (expBox) {
+    expBox.innerHTML = '';
+    const items = Array.isArray(rd.experience) && rd.experience.length ? rd.experience : [{}];
+    items.forEach((item) => expBox.appendChild(createExpItemEl(item)));
+  }
+
+  const eduBox = $('hfEditEduItems');
+  if (eduBox) {
+    eduBox.innerHTML = '';
+    const items = Array.isArray(rd.education) && rd.education.length ? rd.education : [{}];
+    items.forEach((item) => eduBox.appendChild(createEduItemEl(item)));
+  }
+
+  const projBox = $('hfEditProjItems');
+  if (projBox) {
+    projBox.innerHTML = '';
+    const items = Array.isArray(rd.projects) && rd.projects.length ? rd.projects : [{}];
+    items.forEach((item) => projBox.appendChild(createProjItemEl(item)));
+  }
+
+  const certBox = $('hfEditCertItems');
+  if (certBox) {
+    certBox.innerHTML = '';
+    const items = Array.isArray(rd.certifications) && rd.certifications.length ? rd.certifications : [];
+    items.forEach((item) => certBox.appendChild(createCertItemEl(item)));
+  }
+}
+
+async function showHireFlowResumeModal(customUser = null, startInEdit = false) {
   const profile = customUser || await getCandidateProfile();
   if (!profile) return toast('Candidate profile not found. Please log in.');
 
-  $('hfResumeName').textContent = profile.name || 'Candidate';
-  $('hfResumeEmail').textContent = profile.email || '';
-  
-  const skills = skillList(profile.skills);
-  $('hfResumeSkills').innerHTML = skills.length
-    ? skills.map((s) => `<span class="skill-tag">${s}</span>`).join('')
-    : '<span class="muted font-xs">No technical skills detected yet. Upload a resume to automatically extract skills.</span>';
+  renderHireFlowResumeView(profile);
+  populateHireFlowResumeForm(profile);
 
-  if (profile.resume_url) {
-    $('hfResumeDocLink').innerHTML = `<a href="${profile.resume_url}" target="_blank" class="btn btn-ghost btn-sm">📄 View Original Uploaded Document</a>`;
-  } else {
-    $('hfResumeDocLink').textContent = 'No original document uploaded yet.';
-  }
-
-  $('hireflowResumeModal').classList.remove('hidden');
+  switchHireFlowModalMode(startInEdit && !isCompany() ? 'edit' : 'preview');
+  $('hireflowResumeModal')?.classList.remove('hidden');
 }
 
 async function openApplyModal(jobId) {
@@ -918,6 +1236,135 @@ $('resumeModalClose')?.addEventListener('click', () => $('hireflowResumeModal')?
 $('btnCloseResume')?.addEventListener('click', () => $('hireflowResumeModal')?.classList.add('hidden'));
 $('btnPrintResume')?.addEventListener('click', () => window.print());
 
+// HireFlow Resume Mode toggles
+$('btnEditHireFlowResume')?.addEventListener('click', () => switchHireFlowModalMode('edit'));
+$('btnQuickEditResume')?.addEventListener('click', () => switchHireFlowModalMode('edit'));
+$('btnPreviewModeHireFlowResume')?.addEventListener('click', () => switchHireFlowModalMode('preview'));
+$('btnCancelEditResume')?.addEventListener('click', () => switchHireFlowModalMode('preview'));
+
+// HireFlow Resume Dynamic Repeater Adders
+$('btnAddExpItem')?.addEventListener('click', () => {
+  $('hfEditExpItems')?.appendChild(createExpItemEl({}));
+});
+$('btnAddEduItem')?.addEventListener('click', () => {
+  $('hfEditEduItems')?.appendChild(createEduItemEl({}));
+});
+$('btnAddProjItem')?.addEventListener('click', () => {
+  $('hfEditProjItems')?.appendChild(createProjItemEl({}));
+});
+$('btnAddCertItem')?.addEventListener('click', () => {
+  $('hfEditCertItems')?.appendChild(createCertItemEl({}));
+});
+
+// HireFlow Resume Save Form Submission
+$('hfEditResumeForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const saveBtn = $('btnSaveResume');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving Resume...';
+  }
+
+  // Collect repeater items
+  const experience = [];
+  document.querySelectorAll('#hfEditExpItems .hf-repeater-item').forEach((row) => {
+    const title = row.querySelector('.exp-title')?.value.trim();
+    const company = row.querySelector('.exp-company')?.value.trim();
+    if (title || company) {
+      experience.push({
+        title,
+        company,
+        location: row.querySelector('.exp-location')?.value.trim() || '',
+        startDate: row.querySelector('.exp-start')?.value.trim() || '',
+        endDate: row.querySelector('.exp-end')?.value.trim() || '',
+        description: row.querySelector('.exp-desc')?.value.trim() || ''
+      });
+    }
+  });
+
+  const education = [];
+  document.querySelectorAll('#hfEditEduItems .hf-repeater-item').forEach((row) => {
+    const degree = row.querySelector('.edu-degree')?.value.trim();
+    const institution = row.querySelector('.edu-inst')?.value.trim();
+    if (degree || institution) {
+      education.push({
+        degree,
+        institution,
+        year: row.querySelector('.edu-year')?.value.trim() || '',
+        grade: row.querySelector('.edu-grade')?.value.trim() || ''
+      });
+    }
+  });
+
+  const projects = [];
+  document.querySelectorAll('#hfEditProjItems .hf-repeater-item').forEach((row) => {
+    const title = row.querySelector('.proj-title')?.value.trim();
+    if (title) {
+      projects.push({
+        title,
+        techStack: row.querySelector('.proj-tech')?.value.trim() || '',
+        link: row.querySelector('.proj-link')?.value.trim() || '',
+        description: row.querySelector('.proj-desc')?.value.trim() || ''
+      });
+    }
+  });
+
+  const certifications = [];
+  document.querySelectorAll('#hfEditCertItems .hf-repeater-item').forEach((row) => {
+    const name = row.querySelector('.cert-name')?.value.trim();
+    if (name) {
+      certifications.push({
+        name,
+        issuer: row.querySelector('.cert-issuer')?.value.trim() || '',
+        year: row.querySelector('.cert-year')?.value.trim() || ''
+      });
+    }
+  });
+
+  const skills = ($('hfEditSkillsInput')?.value || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const name = $('hfEditNameInput')?.value.trim();
+
+  const payload = {
+    name,
+    headline: $('hfEditHeadlineInput')?.value.trim() || '',
+    phone: $('hfEditPhoneInput')?.value.trim() || '',
+    location: $('hfEditLocationInput')?.value.trim() || '',
+    website: $('hfEditWebsiteInput')?.value.trim() || '',
+    linkedin: $('hfEditLinkedInInput')?.value.trim() || '',
+    github: $('hfEditGitHubInput')?.value.trim() || '',
+    summary: $('hfEditSummaryInput')?.value.trim() || '',
+    skills,
+    experience,
+    education,
+    projects,
+    certifications
+  };
+
+  try {
+    const res = await api('/api/users/hireflow-resume', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+    candidateProfileCache = res.data;
+    if (name) {
+      localStorage.setItem('name', name);
+      renderNav();
+    }
+    toast('🌟 HireFlow Resume saved successfully!');
+    renderHireFlowResumeView(res.data);
+    switchHireFlowModalMode('preview');
+    if (location.hash === '#/profile') loadProfile();
+    if (location.hash === '#/dashboard') loadCandidateDashboard();
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Save HireFlow Resume';
+    }
+  }
+});
+
 $('applyResumeFile')?.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (file) {
@@ -1202,10 +1649,9 @@ function renderCompanyApps() {
         ${a.note ? `<div class="mt-2 font-xs muted"><b>Note:</b> ${escapeHtml(a.note)}</div>` : ''}
         ${skills.length ? `<div class="card-skills mt-2">${skills.slice(0, 6).map((s) => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
         <div class="card-footer mt-3">
-          <div>
-            ${a.resume_url
-              ? `<a href="${a.resume_url}" target="_blank" class="btn btn-sm">📄 ${resumeLabel}</a>`
-              : '<span class="muted font-xs">No resume document attached</span>'}
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+            ${a.candidate ? `<button type="button" class="btn btn-secondary btn-sm" data-view-hf-app="${a.id}">🌟 View HireFlow Resume</button>` : ''}
+            ${a.resume_url ? `<a href="${a.resume_url}" target="_blank" class="btn btn-ghost btn-sm">📄 Original File</a>` : ''}
           </div>
           <div class="job-actions" style="flex-wrap:wrap;">
             ${a.candidate?.id ? `<button type="button" class="btn btn-secondary btn-sm" data-chat-candidate="${a.candidate.id}" data-candidate-name="${escapeHtml(a.candidate.name)}" data-job-id="${a.job?.id || ''}">💬 Message Candidate</button>` : ''}
@@ -1217,6 +1663,13 @@ function renderCompanyApps() {
       </div>`;
   }).join('')
     : '<p class="muted">No applications found.</p>';
+
+  document.querySelectorAll('[data-view-hf-app]').forEach((btn) => btn.addEventListener('click', () => {
+    const app = coAppsCache.find((x) => x.id === btn.dataset.viewHfApp);
+    if (app && app.candidate) {
+      showHireFlowResumeModal(app.candidate, false);
+    }
+  }));
 
   document.querySelectorAll('[data-chat-candidate]').forEach((btn) => btn.addEventListener('click', () => {
     openChatModal(btn.dataset.chatCandidate, { id: btn.dataset.jobId }, { name: btn.dataset.candidateName });

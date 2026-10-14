@@ -461,34 +461,92 @@ select { background:#0f172a; color:var(--text); border:1px solid var(--line); bo
   gap: 0.75rem;
 }
 
-/* HireFlow Digital Resume Sheet */
+/* HireFlow Digital Resume Sheet & Edit Form */
 .resume-preview-card {
-  max-width: 680px;
-  width: 100%;
+  max-width: 860px;
+  width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid #334155;
+  background: #090e1a;
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+}
+.hf-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.hf-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 .hireflow-resume-sheet {
-  background: #0b1120;
-  border: 1px solid var(--line);
+  background: #0f172a;
+  border: 1px solid #1e293b;
   border-radius: 12px;
-  padding: 1.75rem;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  padding: 1.8rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
 }
 .hf-resume-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 1.2rem;
+}
+.hf-header-info {
+  flex: 1;
+  min-width: 280px;
 }
 .hf-resume-header h1 {
-  margin: 0 0 0.3rem 0;
-  font-size: 1.6rem;
+  margin: 0 0 0.2rem 0;
+  font-size: 1.75rem;
+  font-weight: 800;
   color: #f8fafc;
+  letter-spacing: -0.02em;
 }
-.hf-email {
-  margin: 0;
-  color: var(--acc);
-  font-size: 0.95rem;
+.hf-resume-headline {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #38bdf8;
+  margin-bottom: 0.45rem;
+}
+.hf-contact-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin-bottom: 0.35rem;
+}
+.hf-contact-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.hf-links-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.84rem;
+}
+.hf-links-strip a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #818cf8;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.hf-links-strip a:hover {
+  color: #c7d2fe;
+  text-decoration: underline;
 }
 .hf-brand-stamp {
   text-align: right;
@@ -505,34 +563,205 @@ select { background:#0f172a; color:var(--text); border:1px solid var(--line); bo
 }
 .hf-divider {
   height: 1px;
-  background: var(--line);
+  background: #1e293b;
   margin: 1.2rem 0;
 }
 .hf-section {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.35rem;
 }
 .hf-section h3 {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.92rem;
+  margin: 0 0 0.6rem 0;
+  font-size: 0.88rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--acc);
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 .hf-text {
   margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.6;
-  color: var(--text);
+  font-size: 0.93rem;
+  line-height: 1.65;
+  color: #e2e8f0;
 }
 .hf-skills-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 .hf-resume-badge {
   font-weight: 700;
   color: var(--acc2);
   font-size: 0.95rem;
+}
+
+/* Timeline & Cards for Experience, Education, Projects */
+.hf-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.hf-item-card {
+  background: #090e1a;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+}
+.hf-item-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+.hf-item-title-row strong {
+  color: #f8fafc;
+  font-size: 0.98rem;
+}
+.hf-item-date {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+.hf-item-sub {
+  font-size: 0.86rem;
+  color: #38bdf8;
+  margin-bottom: 0.4rem;
+}
+.hf-item-desc {
+  font-size: 0.87rem;
+  color: #cbd5e1;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+.hf-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+.hf-proj-card {
+  background: #090e1a;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+}
+.hf-proj-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+.hf-proj-title strong {
+  color: #f8fafc;
+  font-size: 0.98rem;
+}
+.hf-proj-title a {
+  font-size: 0.82rem;
+  color: #818cf8;
+  text-decoration: none;
+}
+.hf-proj-title a:hover {
+  text-decoration: underline;
+}
+.hf-proj-stack {
+  font-size: 0.8rem;
+  color: #a78bfa;
+  margin-bottom: 0.4rem;
+}
+.hf-cert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.hf-cert-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #090e1a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.88rem;
+}
+
+/* Edit Mode Form Styles */
+.hf-edit-form {
+  background: #090e1a;
+  border-radius: 12px;
+  padding: 0.5rem 0.2rem;
+}
+.hf-edit-intro {
+  margin-bottom: 1.2rem;
+}
+.hf-edit-intro h3 {
+  margin: 0 0 0.2rem 0;
+  color: #f8fafc;
+  font-size: 1.25rem;
+}
+.hf-form-group-card {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 1.2rem;
+}
+.hf-form-group-card h4 {
+  margin: 0 0 0.9rem 0;
+  color: #38bdf8;
+  font-size: 1rem;
+}
+.hf-card-top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.9rem;
+}
+.hf-card-top-header h4 {
+  margin: 0;
+}
+.hf-repeater-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.hf-repeater-item {
+  background: #090e1a;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 1rem;
+  position: relative;
+}
+.hf-repeater-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+.hf-repeater-item-header strong {
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+.hf-btn-remove {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.hf-btn-remove:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+.hf-edit-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  padding: 1rem 0 0.2rem;
 }
 
 @media print {

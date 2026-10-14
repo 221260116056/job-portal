@@ -12,7 +12,7 @@ exports.list = async (req, res, next) => {
     const apps = await Application.findAll({
       where: { job_id: jobIds },
       include: [
-        { model: User, attributes: ['id', 'name', 'email', 'resume_url', 'skills'] },
+        { model: User, attributes: ['id', 'name', 'email', 'resume_url', 'skills', 'resume_data'] },
         { model: Job, attributes: ['id', 'title'] },
       ],
       order: [['applied_at', 'DESC']],
@@ -29,7 +29,8 @@ exports.list = async (req, res, next) => {
         name: a.User.name,
         email: a.User.email,
         resume_url: a.resume_url || a.User.resume_url,
-        skills: readSkills(a.User)
+        skills: readSkills(a.User),
+        resume_data: a.User.resume_data || {}
       } : null,
       job: a.Job ? { id: a.Job.id, title: a.Job.title } : null,
       applied_at: a.applied_at,

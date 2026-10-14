@@ -26,11 +26,61 @@ const publicUser = (user) => ({
   email: user.email,
   resume_url: user.resume_url,
   skills: readSkills(user),
+  resume_data: user.resume_data || {},
 });
 
 exports.me = (req, res) => success(res, 'Current user retrieved successfully', publicUser(req.user));
 
 exports.skills = (req, res) => success(res, 'Candidate skills retrieved successfully', { skills: readSkills(req.user) });
+
+exports.updateHireFlowResume = async (req, res, next) => {
+  try {
+    const {
+      name,
+      headline,
+      phone,
+      location,
+      website,
+      linkedin,
+      github,
+      summary,
+      skills,
+      experience,
+      education,
+      projects,
+      certifications
+    } = req.body;
+
+    const resumeData = {
+      headline: headline ? String(headline).trim() : '',
+      phone: phone ? String(phone).trim() : '',
+      location: location ? String(location).trim() : '',
+      website: website ? String(website).trim() : '',
+      linkedin: linkedin ? String(linkedin).trim() : '',
+      github: github ? String(github).trim() : '',
+      summary: summary ? String(summary).trim() : '',
+      experience: Array.isArray(experience) ? experience : [],
+      education: Array.isArray(education) ? education : [],
+      projects: Array.isArray(projects) ? projects : [],
+      certifications: Array.isArray(certifications) ? certifications : [],
+    };
+
+    const updates = { resume_data: resumeData };
+
+    if (name && String(name).trim()) {
+      updates.name = String(name).trim();
+    }
+
+    if (Array.isArray(skills)) {
+      updates.skills = skills.map((s) => String(s).trim()).filter(Boolean);
+    } else if (typeof skills === 'string') {
+      updates.skills = skills.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+
+    await req.user.update(updates);
+    return success(res, 'HireFlow Resume saved successfully', publicUser(req.user));
+  } catch (error) { next(error); }
+};
 
 exports.uploadResume = async (req, res, next) => {
   if (!req.file) return res.status(400).json({ success: false, message: 'A resume file is required in the resume field' });
