@@ -94,4 +94,42 @@ exports.changePassword = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+exports.suspendAccount = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    const bcrypt = require('bcryptjs');
+    const userWithPassword = await User.unscoped().findByPk(req.user.id);
+    if (!userWithPassword) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (password) {
+      const valid = await bcrypt.compare(password, userWithPassword.password);
+      if (!valid) return res.status(400).json({ success: false, message: 'Incorrect password' });
+    }
+
+    await userWithPassword.update({ is_suspended: true });
+    return success(res, 'Account suspended successfully. You can reactivate by logging in anytime.', { is_suspended: true });
+  } catch (error) { next(error); }
+};
+
+exports.deleteAccount = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    const bcrypt = require('bcryptjs');
+    const userWithPassword = await User.unscoped().findByPk(req.user.id);
+    if (!userWithPassword) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (password) {
+      const valid = await bcrypt.compare(password, userWithPassword.password);
+      if (!valid) return res.status(400).json({ success: false, message: 'Incorrect password' });
+    }
+
+    if (userWithPassword.resume_url) {
+      fs.unlink(path.resolve(process.cwd(), process.env.UPLOAD_DIR || 'uploads/resumes', path.basename(userWithPassword.resume_url))).catch(() => {});
+    }
+
+    await userWithPassword.destroy();
+    return success(res, 'Account permanently deleted');
+  } catch (error) { next(error); }
+};
+
 exports.readSkills = readSkills;

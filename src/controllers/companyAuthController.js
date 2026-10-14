@@ -31,7 +31,19 @@ exports.login = async (req, res, next) => {
   try {
     const company = await Company.unscoped().findOne({ where: { email: req.body.email.toLowerCase() } });
     if (!company || !(await bcrypt.compare(req.body.password, company.password))) return res.status(401).json({ success: false, message: 'Invalid company email or password' });
-    return success(res, 'Company login successful', { token: tokenFor(company, COMPANY), role: COMPANY, company: publicCompany(company) });
+
+    let wasSuspended = false;
+    if (company.is_suspended) {
+      await company.update({ is_suspended: false });
+      wasSuspended = true;
+    }
+
+    return success(res, wasSuspended ? 'Company account reactivated and login successful' : 'Company login successful', {
+      token: tokenFor(company, COMPANY),
+      role: COMPANY,
+      company: publicCompany(company),
+      reactivated: wasSuspended
+    });
   } catch (error) { next(error); }
 };
 
@@ -68,6 +80,40 @@ exports.changePassword = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await companyWithPw.update({ password: hashedPassword });
     return success(res, 'Password updated successfully');
+  } catch (error) { next(error); }
+};
+
+exports.suspendAccount = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    const bcrypt = require('bcryptjs');
+    const companyWithPw = await Company.unscoped().findByPk(req.company.id);
+    if (!companyWithPw) return res.status(404).json({ success: false, message: 'Company not found' });
+
+    if (password) {
+      const valid = await bcrypt.compare(password, companyWithPw.password);
+      if (!valid) return res.status(400).json({ success: false, message: 'Incorrect password' });
+    }
+
+    await companyWithPw.update({ is_suspended: true });
+    return success(res, 'Company account suspended. You can reactivate by logging in anytime.', { is_suspended: true });
+  } catch (error) { next(error); }
+};
+
+exports.deleteAccount = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    const bcrypt = require('bcryptjs');
+    const companyWithPw = await Company.unscoped().findByPk(req.company.id);
+    if (!companyWithPw) return res.status(404).json({ success: false, message: 'Company not found' });
+
+    if (password) {
+      const valid = await bcrypt.compare(password, companyWithPw.password);
+      if (!valid) return res.status(400).json({ success: false, message: 'Incorrect password' });
+    }
+
+    await companyWithPw.destroy();
+    return success(res, 'Company account permanently deleted');
   } catch (error) { next(error); }
 };
 

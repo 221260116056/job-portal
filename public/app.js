@@ -257,7 +257,7 @@ $('loginForm').addEventListener('submit', async (e) => {
   try {
     const res = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email: $('loginEmail').value, password: $('loginPassword').value }) });
     loginAs({ token: res.data.token, role: 'candidate', email: res.data.user.email, name: res.data.user.name });
-    toast('Login successful'); location.hash = '#/dashboard';
+    toast(res.message || 'Login successful'); location.hash = '#/dashboard';
   } catch (err) { toast(err.message); }
 });
 
@@ -278,7 +278,7 @@ $('companyLoginForm').addEventListener('submit', async (e) => {
   try {
     const res = await api('/api/company/auth/login', { method: 'POST', body: JSON.stringify({ email: $('coLoginEmail').value, password: $('coLoginPassword').value }) });
     loginAs({ token: res.data.token, role: 'company', email: res.data.company.email, name: res.data.company.company_name });
-    toast('Company login successful'); location.hash = '#/company/dashboard';
+    toast(res.message || 'Company login successful'); location.hash = '#/company/dashboard';
   } catch (err) { toast(err.message); }
 });
 
@@ -893,6 +893,10 @@ $('changePasswordForm')?.addEventListener('submit', async (e) => {
 
 $('resumeForm').addEventListener('submit', uploadResume('resumeFile', () => { candidateProfileCache = null; loadProfile(); location.hash = '#/dashboard'; }));
 
+// Candidate Danger Zone actions
+$('btnSuspendCandidate')?.addEventListener('click', () => openAccountActionModal('suspend', 'candidate'));
+$('btnDeleteCandidate')?.addEventListener('click', () => openAccountActionModal('delete', 'candidate'));
+
 // ---------- Apply Modal & Resume Selection Flow ----------
 $('optHireFlow')?.addEventListener('change', () => {
   $('optHireFlowCard')?.classList.add('selected');
@@ -1231,6 +1235,29 @@ function renderCompanyApps() {
 $('appJobFilter').addEventListener('change', renderCompanyApps);
 $('appStatusFilter').addEventListener('change', renderCompanyApps);
 
+// Company Account Settings & Danger Zone
+$('companyChangePwForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const currentPassword = $('coCurrentPw')?.value || '';
+  const newPassword = $('coNewPw')?.value || '';
+  const confirmPassword = $('coConfirmPw')?.value || '';
+
+  if (newPassword !== confirmPassword) return toast('New passwords do not match');
+  if (newPassword.length < 6) return toast('New password must be at least 6 characters');
+
+  try {
+    await api('/api/company/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    toast('Organization password updated successfully');
+    e.target.reset();
+  } catch (err) { toast(err.message); }
+});
+
+$('btnSuspendCompany')?.addEventListener('click', () => openAccountActionModal('suspend', 'company'));
+$('btnDeleteCompany')?.addEventListener('click', () => openAccountActionModal('delete', 'company'));
+
 // ==========================================================================
 // Direct Messaging & Real-Time Chat Management
 // ==========================================================================
@@ -1501,6 +1528,158 @@ document.addEventListener('click', (e) => {
   const chatModal = $('chatModal');
   if (chatModal && e.target === chatModal) {
     chatModal.classList.add('hidden');
+  }
+  const actModal = $('accountActionModal');
+  if (actModal && e.target === actModal) {
+    closeAccountActionModal();
+  }
+});
+
+// ==========================================================================
+// Account Action Modal (Suspend / Delete Account)
+// ==========================================================================
+let accountModalAction = null; // 'suspend' | 'delete'
+let accountModalRole = null;   // 'candidate' | 'company'
+
+function openAccountActionModal(actionType, role) {
+  accountModalAction = actionType;
+  accountModalRole = role;
+
+  const isSuspend = actionType === 'suspend';
+  const isCandidateUser = role === 'candidate';
+
+  const modal = $('accountActionModal');
+  const icon = $('accountActionIcon');
+  const badge = $('accountActionBadge');
+  const title = $('accountActionTitle');
+  const desc = $('accountActionDesc');
+  const submitBtn = $('accountActionSubmit');
+  const errBox = $('accountActionError');
+  const pwInput = $('accountActionPassword');
+
+  if (errBox) {
+    errBox.textContent = '';
+    errBox.classList.add('hidden');
+  }
+  if (pwInput) pwInput.value = '';
+
+  if (isSuspend) {
+    if (badge) {
+      badge.textContent = '⏸️ Temporary Suspension';
+      badge.style.background = 'rgba(217, 119, 6, 0.15)';
+      badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      badge.style.color = '#fde68a';
+    }
+    if (icon) icon.textContent = '⏸️';
+    if (title) title.textContent = isCandidateUser ? 'Suspend Candidate Account' : 'Suspend Organization Account';
+    if (desc) {
+      desc.textContent = isCandidateUser
+        ? 'Your profile, applications, and visibility will be temporarily paused. You can easily reactivate your account anytime simply by logging back in with your credentials.'
+        : 'Your company profile and job postings will be paused. Logging back in anytime will automatically reactivate your organization.';
+    }
+    if (submitBtn) {
+      submitBtn.textContent = 'Confirm Account Suspension';
+      submitBtn.className = 'btn btn-warn';
+      submitBtn.disabled = false;
+    }
+  } else {
+    if (badge) {
+      badge.textContent = '⚠️ Permanent Deletion';
+      badge.style.background = 'rgba(239, 68, 68, 0.15)';
+      badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      badge.style.color = '#fca5a5';
+    }
+    if (icon) icon.textContent = '🗑️';
+    if (title) title.textContent = isCandidateUser ? 'Delete Candidate Account' : 'Delete Organization Account';
+    if (desc) {
+      desc.textContent = isCandidateUser
+        ? 'Permanently delete your candidate profile, uploaded resume, application history, and messages. This action CANNOT be reversed.'
+        : 'Permanently delete your company, all published jobs, applicant records, and conversation history. This action CANNOT be reversed.';
+    }
+    if (submitBtn) {
+      submitBtn.textContent = 'Permanently Delete My Account';
+      submitBtn.className = 'btn btn-danger';
+      submitBtn.disabled = false;
+    }
+  }
+
+  modal?.classList.remove('hidden');
+  wirePasswordToggles();
+}
+
+function closeAccountActionModal() {
+  const modal = $('accountActionModal');
+  if (modal) modal.classList.add('hidden');
+  const pw = $('accountActionPassword');
+  if (pw) pw.value = '';
+  const errBox = $('accountActionError');
+  if (errBox) {
+    errBox.textContent = '';
+    errBox.classList.add('hidden');
+  }
+}
+
+$('accountActionClose')?.addEventListener('click', closeAccountActionModal);
+$('accountActionCancel')?.addEventListener('click', closeAccountActionModal);
+
+$('accountActionForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const password = $('accountActionPassword')?.value || '';
+  if (!password) {
+    const errBox = $('accountActionError');
+    if (errBox) {
+      errBox.textContent = 'Please enter your password to confirm.';
+      errBox.classList.remove('hidden');
+    }
+    return;
+  }
+
+  const submitBtn = $('accountActionSubmit');
+  const isSuspend = accountModalAction === 'suspend';
+  const isCandidateUser = accountModalRole === 'candidate';
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+  }
+
+  let endpoint = '';
+  let method = '';
+  if (isCandidateUser) {
+    endpoint = isSuspend ? '/api/users/suspend' : '/api/users/account';
+    method = isSuspend ? 'PUT' : 'DELETE';
+  } else {
+    endpoint = isSuspend ? '/api/company/suspend' : '/api/company/account';
+    method = isSuspend ? 'PUT' : 'DELETE';
+  }
+
+  try {
+    const res = await api(endpoint, {
+      method,
+      body: JSON.stringify({ password })
+    });
+
+    closeAccountActionModal();
+    toast(res.message || (isSuspend ? 'Account suspended successfully' : 'Account permanently deleted'));
+
+    // Clear session & log out
+    ['token', 'role', 'email', 'name'].forEach((k) => localStorage.removeItem(k));
+    savedJobIdsSet.clear();
+    cachedApplications = [];
+    cachedSavedJobs = [];
+    conversationsCache = [];
+    renderNav();
+    location.hash = isCandidateUser ? '#/login' : '#/company/login';
+  } catch (err) {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = isSuspend ? 'Confirm Account Suspension' : 'Permanently Delete My Account';
+    }
+    const errBox = $('accountActionError');
+    if (errBox) {
+      errBox.textContent = err.message || 'Verification failed. Please check your password.';
+      errBox.classList.remove('hidden');
+    }
   }
 });
 

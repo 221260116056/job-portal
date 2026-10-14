@@ -17,6 +17,18 @@ exports.login = async (req, res, next) => {
   try {
     const user = await User.unscoped().findOne({ where: { email: req.body.email.toLowerCase() } });
     if (!user || !(await bcrypt.compare(req.body.password, user.password))) return res.status(401).json({ success: false, message: 'Invalid email or password' });
-    return success(res, 'Login successful', { token: tokenFor(user, CANDIDATE), role: CANDIDATE, user: { id: user.id, name: user.name, email: user.email } });
+
+    let wasSuspended = false;
+    if (user.is_suspended) {
+      await user.update({ is_suspended: false });
+      wasSuspended = true;
+    }
+
+    return success(res, wasSuspended ? 'Account reactivated and login successful' : 'Login successful', {
+      token: tokenFor(user, CANDIDATE),
+      role: CANDIDATE,
+      user: { id: user.id, name: user.name, email: user.email },
+      reactivated: wasSuspended
+    });
   } catch (error) { next(error); }
 };

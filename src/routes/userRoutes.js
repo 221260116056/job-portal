@@ -7,4 +7,6 @@ router.put('/profile', requireCandidate, controller.updateProfile);
 router.put('/change-password', requireCandidate, controller.changePassword);
 router.get('/skills', requireCandidate, controller.skills);
 router.post('/resume', requireCandidate, upload, controller.uploadResume);
+router.put('/suspend', requireCandidate, controller.suspendAccount);
+router.delete('/account', requireCandidate, controller.deleteAccount);
 module.exports = router;
