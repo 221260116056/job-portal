@@ -57,26 +57,45 @@ function escapeHtml(str) {
 // ---------- navigation ----------
 const NAVS = {
   public: [['#/jobs', 'Jobs']],
-  candidate: [['#/dashboard', 'Dashboard'], ['#/jobs', 'Jobs'], ['#/my-applications', 'My Applications'], ['#/profile', 'Profile']],
+  candidate: [['#/dashboard', 'Dashboard'], ['#/jobs', 'Jobs'], ['#/my-applications', 'My Applications']],
   company: [['#/company/dashboard', 'Dashboard'], ['#/company/jobs', 'My Jobs'], ['#/company/applications', 'Applications'], ['#/company/jobs/create', 'Post Job']],
 };
 function closeAuthMenu() {
-  $('authMenu').classList.add('hidden');
-  $('authDropBtn').setAttribute('aria-expanded', 'false');
+  $('authMenu')?.classList.add('hidden');
+  $('authDropBtn')?.setAttribute('aria-expanded', 'false');
+}
+function closeUserMenu() {
+  $('userMenu')?.classList.add('hidden');
+  $('userBadgeBtn')?.setAttribute('aria-expanded', 'false');
 }
 function renderNav() {
   const role = isCompany() ? 'company' : isCandidate() ? 'candidate' : 'public';
   closeMobileMenu();
+  closeAuthMenu();
+  closeUserMenu();
   $('mainNav').innerHTML = NAVS[role].map(([h, l]) => `<a class="nav-btn" href="${h}">${l}</a>`).join('');
   const { token, email, name } = session();
   const loggedOut = !token;
-  $('authDropdown').classList.toggle('hidden', !loggedOut);
-  if (loggedOut) closeAuthMenu();
-  $('profileBtn').classList.toggle('hidden', role !== 'candidate');
-  $('dashBtn').classList.toggle('hidden', role !== 'company');
-  $('logoutBtn').classList.toggle('hidden', loggedOut);
-  $('userBadge').classList.toggle('hidden', loggedOut);
-  if (token) $('userBadge').textContent = `${role === 'company' ? '🏢' : '👤'} ${name || email}`;
+  $('authDropdown')?.classList.toggle('hidden', !loggedOut);
+
+  // User Section Dropdown (Profile + Logout)
+  const userWrap = $('userDropdownWrap');
+  if (userWrap) {
+    userWrap.classList.toggle('hidden', loggedOut);
+    if (token) {
+      const isComp = role === 'company';
+      const displayName = name || email || (isComp ? 'Company' : 'Candidate');
+      if ($('userAvatarBadge')) $('userAvatarBadge').textContent = isComp ? '🏢' : '👤';
+      if ($('userNameLabel')) $('userNameLabel').textContent = displayName;
+      if ($('userMenuAvatar')) $('userMenuAvatar').textContent = isComp ? '🏢' : '👤';
+      if ($('userMenuName')) $('userMenuName').textContent = displayName;
+      if ($('userMenuEmail')) $('userMenuEmail').textContent = email || '';
+      if ($('userMenuRoleBadge')) $('userMenuRoleBadge').textContent = isComp ? 'Company Partner' : 'Verified Candidate';
+      if ($('userMenuProfileLink')) $('userMenuProfileLink').classList.toggle('hidden', isComp);
+      if ($('userMenuSavedLink')) $('userMenuSavedLink').classList.toggle('hidden', isComp);
+      if ($('userMenuDashLink')) $('userMenuDashLink').classList.toggle('hidden', !isComp);
+    }
+  }
 
   // Notification & Message toggles
   $('notifToggleBtn')?.classList.toggle('hidden', loggedOut);
@@ -92,19 +111,36 @@ function renderNav() {
     if (isCandidate()) fetchSavedJobIds();
   }
 }
-$('authDropBtn').addEventListener('click', (e) => {
+$('authDropBtn')?.addEventListener('click', (e) => {
   e.stopPropagation();
+  closeUserMenu();
   const open = $('authMenu').classList.toggle('hidden');
   $('authDropBtn').setAttribute('aria-expanded', String(!open));
 });
-document.addEventListener('click', (e) => {
-  if (!$('authMenu').classList.contains('hidden') && !$('authDropdown').contains(e.target)) closeAuthMenu();
+$('userBadgeBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeAuthMenu();
+  const open = $('userMenu').classList.toggle('hidden');
+  $('userBadgeBtn').setAttribute('aria-expanded', String(!open));
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAuthMenu(); });
-$('authMenu').addEventListener('click', (e) => { if (e.target.closest('a')) closeAuthMenu(); });
+$('userMenu')?.addEventListener('click', (e) => {
+  if (e.target.closest('a')) closeUserMenu();
+});
+document.addEventListener('click', (e) => {
+  if (!$('authMenu')?.classList.contains('hidden') && !$('authDropdown')?.contains(e.target)) closeAuthMenu();
+  const userWrap = $('userDropdownWrap');
+  if (userWrap && !userWrap.contains(e.target)) closeUserMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeAuthMenu();
+    closeUserMenu();
+  }
+});
+$('authMenu')?.addEventListener('click', (e) => { if (e.target.closest('a')) closeAuthMenu(); });
 function closeMobileMenu() {
-  $('mobileMenu').classList.add('hidden');
-  $('menuBtn').setAttribute('aria-expanded', 'false');
+  $('mobileMenu')?.classList.add('hidden');
+  $('menuBtn')?.setAttribute('aria-expanded', 'false');
 }
 function renderMobileMenu() {
   const role = isCompany() ? 'company' : isCandidate() ? 'candidate' : 'public';
@@ -113,36 +149,39 @@ function renderMobileMenu() {
   if (role === 'public') {
     auth = `<div class="dropdown-label">Candidate</div><a href="#/login">Login</a><a href="#/register">Register</a><div class="dropdown-label">Company</div><a href="#/company/login">Company Login</a><a href="#/company/register">Company Register</a>`;
   } else if (role === 'candidate') {
-    auth = `<a href="#/profile">Profile</a><a href="#" id="mNotifs">🔔 Notifications (<span id="mNotifCount">0</span>)</a><a href="#" id="mMessages">💬 Messages (<span id="mMsgCount">0</span>)</a><a href="#" id="mLogout">Logout</a>`;
+    auth = `<a href="#/profile">👤 Profile & Account</a><a href="#" id="mNotifs">🔔 Notifications (<span id="mNotifCount">0</span>)</a><a href="#" id="mMessages">💬 Messages (<span id="mMsgCount">0</span>)</a><a href="#" id="mLogout">🚪 Logout</a>`;
   } else {
-    auth = `<a href="#/company/dashboard">Dashboard</a><a href="#" id="mNotifs">🔔 Notifications (<span id="mNotifCount">0</span>)</a><a href="#" id="mMessages">💬 Messages (<span id="mMsgCount">0</span>)</a><a href="#" id="mLogout">Logout</a>`;
+    auth = `<a href="#/company/dashboard">🏢 Dashboard</a><a href="#" id="mNotifs">🔔 Notifications (<span id="mNotifCount">0</span>)</a><a href="#" id="mMessages">💬 Messages (<span id="mMsgCount">0</span>)</a><a href="#" id="mLogout">🚪 Logout</a>`;
   }
   $('mobileMenu').innerHTML = links + auth;
   const out = $('mLogout');
-  if (out) out.addEventListener('click', (e) => { e.preventDefault(); $('logoutBtn').click(); closeMobileMenu(); });
+  if (out) out.addEventListener('click', (e) => { e.preventDefault(); $('logoutBtn')?.click(); closeMobileMenu(); });
   const mNotif = $('mNotifs');
   if (mNotif) mNotif.addEventListener('click', (e) => { e.preventDefault(); closeMobileMenu(); $('notifToggleBtn')?.click(); });
   const mMsg = $('mMessages');
   if (mMsg) mMsg.addEventListener('click', (e) => { e.preventDefault(); closeMobileMenu(); openChatModal(); });
 }
-$('menuBtn').addEventListener('click', (e) => {
+$('menuBtn')?.addEventListener('click', (e) => {
   e.stopPropagation();
   const willOpen = $('mobileMenu').classList.contains('hidden');
   if (willOpen) renderMobileMenu();
   $('mobileMenu').classList.toggle('hidden');
   $('menuBtn').setAttribute('aria-expanded', String(willOpen));
 });
-$('mobileMenu').addEventListener('click', (e) => { if (e.target.closest('a')) closeMobileMenu(); });
+$('mobileMenu')?.addEventListener('click', (e) => { if (e.target.closest('a')) closeMobileMenu(); });
 document.addEventListener('click', (e) => {
-  if (!$('mobileMenu').classList.contains('hidden') && !$('mobileMenu').contains(e.target) && e.target !== $('menuBtn')) closeMobileMenu();
+  if (!$('mobileMenu')?.classList.contains('hidden') && !$('mobileMenu')?.contains(e.target) && e.target !== $('menuBtn')) closeMobileMenu();
 });
-$('logoutBtn').addEventListener('click', () => {
+$('logoutBtn')?.addEventListener('click', () => {
   ['token', 'role', 'email', 'name'].forEach((k) => localStorage.removeItem(k));
   savedJobIdsSet.clear();
   cachedApplications = [];
   cachedSavedJobs = [];
   conversationsCache = [];
-  renderNav(); toast('Logged out'); location.hash = '#/jobs';
+  closeUserMenu();
+  renderNav();
+  toast('Logged out successfully');
+  location.hash = '#/jobs';
 });
 function loginAs({ token, role, email, name }) {
   localStorage.setItem('token', token);

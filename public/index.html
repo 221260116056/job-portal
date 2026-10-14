@@ -42,7 +42,39 @@
         </button>
       </div>
 
-      <span id="userBadge" class="user-badge hidden"></span>
+      <!-- User Account Section (Profile + Logout Dropdown) -->
+      <div id="userDropdownWrap" class="dropdown user-dropdown-wrap hidden">
+        <button id="userBadgeBtn" class="user-badge-btn" aria-haspopup="true" aria-expanded="false" type="button" title="User Menu">
+          <span class="user-avatar-badge" id="userAvatarBadge">👤</span>
+          <span id="userNameLabel" class="user-name-label">User</span>
+          <span class="caret">▾</span>
+        </button>
+        <div id="userMenu" class="dropdown-menu user-menu-dropdown hidden" role="menu">
+          <div class="user-menu-profile-summary">
+            <div class="user-menu-avatar" id="userMenuAvatar">👤</div>
+            <div class="user-menu-info">
+              <strong id="userMenuName">User</strong>
+              <span id="userMenuEmail" class="muted font-xs">user@example.com</span>
+              <span id="userMenuRoleBadge" class="pill font-xs">Candidate</span>
+            </div>
+          </div>
+          <div class="dropdown-sep"></div>
+          <a href="#/profile" id="userMenuProfileLink" class="user-menu-action" role="menuitem">
+            <span>👤</span> <span>Profile & Account</span>
+          </a>
+          <a href="#/my-applications" id="userMenuSavedLink" class="user-menu-action" role="menuitem">
+            <span>🔖</span> <span>Saved Jobs & Applications</span>
+          </a>
+          <a href="#/company/dashboard" id="userMenuDashLink" class="user-menu-action hidden" role="menuitem">
+            <span>🏢</span> <span>Company Dashboard</span>
+          </a>
+          <div class="dropdown-sep"></div>
+          <button type="button" id="logoutBtn" class="user-menu-action user-menu-logout" role="menuitem">
+            <span>🚪</span> <span>Logout</span>
+          </button>
+        </div>
+      </div>
+
       <div id="authDropdown" class="dropdown hidden">
         <button id="authDropBtn" class="btn btn-primary" aria-haspopup="true" aria-expanded="false">Login / Register ▾</button>
         <div id="authMenu" class="dropdown-menu hidden" role="menu">
@@ -55,9 +87,6 @@
           <a href="#/company/register" role="menuitem">Company Register</a>
         </div>
       </div>
-      <a id="profileBtn" href="#/profile" class="btn hidden">Profile</a>
-      <a id="dashBtn" href="#/company/dashboard" class="btn btn-secondary hidden">Dashboard</a>
-      <button id="logoutBtn" class="btn btn-ghost hidden">Logout</button>
     </div>
     <button id="menuBtn" class="menu-btn" aria-label="Open menu" aria-expanded="false">☰</button>
   </header>
