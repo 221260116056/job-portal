@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { Job } = require('../models');
 const { success } = require('../utils/response');
 const { normalizeSkills, scoreJob } = require('../utils/extractSkills');
@@ -12,7 +13,27 @@ exports.list = async (req, res, next) => {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
-    const { count, rows } = await Job.findAndCountAll({ order: [['created_at', 'DESC']], limit, offset: (page - 1) * limit });
+    const searchTerm = (req.query.keyword || req.query.q || '').trim();
+    const locationTerm = (req.query.location || '').trim();
+
+    const where = {};
+    if (searchTerm) {
+      where[Op.or] = [
+        { title: { [Op.iLike]: `%${searchTerm}%` } },
+        { company: { [Op.iLike]: `%${searchTerm}%` } },
+        { description: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    if (locationTerm && locationTerm.toLowerCase() !== 'all' && locationTerm.toLowerCase() !== 'all locations') {
+      where.location = { [Op.iLike]: `%${locationTerm}%` };
+    }
+
+    const { count, rows } = await Job.findAndCountAll({
+      where,
+      order: [['created_at', 'DESC']],
+      limit,
+      offset: (page - 1) * limit
+    });
     return res.json({ success: true, data: rows.map(withSkillsArray), pagination: { page, limit, total: count, totalPages: Math.ceil(count / limit) } });
   } catch (error) { next(error); }
 };

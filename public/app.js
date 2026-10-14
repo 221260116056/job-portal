@@ -141,6 +141,7 @@ function route() {
   document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
   $(view).classList.add('active');
   document.querySelectorAll('#mainNav .nav-btn').forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#/' + h));
+  wirePasswordToggles();
   if (h === 'dashboard') loadCandidateDashboard();
   if (h === 'jobs') { loadJobs(); loadRecommendedTeaser(); }
   if (h === 'my-applications') loadApplications();
@@ -248,17 +249,46 @@ async function loadCandidateDashboard() {
   // recommended
   try {
     const { jobs, message } = await fetchRecommended();
+    candidateRecommendedJobs = jobs;
     trackJobs(jobs);
-    if (!jobs.length) {
-      $('dashJobsInfo').innerHTML = `<p class="muted">${message || 'No matching jobs found.'}</p>`;
-      $('dashJobs').innerHTML = '';
-    } else {
-      $('dashJobsInfo').innerHTML = `<p class="muted">${message || 'Based on your resume.'}</p>`;
-      $('dashJobs').innerHTML = jobs.map(jobCard).join('');
-    }
-    wireJobButtons();
+    renderCandidateDashboardJobs(message);
   } catch (err) { $('dashJobsInfo').innerHTML = `<p class="muted">${err.message}</p>`; }
 }
+
+let candidateRecommendedJobs = [];
+function renderCandidateDashboardJobs(defaultMessage) {
+  const kw = ($('dashSearchKeyword')?.value || '').trim().toLowerCase();
+  const loc = ($('dashSearchLocation')?.value || '').trim().toLowerCase();
+
+  let filtered = candidateRecommendedJobs || [];
+  if (kw) {
+    filtered = filtered.filter((j) =>
+      `${j.title} ${j.company} ${j.description || ''} ${skillList(j.skills).join(' ')}`.toLowerCase().includes(kw)
+    );
+  }
+  if (loc && loc !== 'all locations') {
+    filtered = filtered.filter((j) => (j.location || '').toLowerCase().includes(loc));
+  }
+
+  if (!filtered.length) {
+    $('dashJobsInfo').innerHTML = `<p class="muted">${kw || loc ? 'No matching jobs found with your search criteria.' : (defaultMessage || 'No matching jobs found.')}</p>`;
+    $('dashJobs').innerHTML = '';
+  } else {
+    $('dashJobsInfo').innerHTML = `<p class="muted">${kw || loc ? `Showing ${filtered.length} matching position(s).` : (defaultMessage || 'Based on your resume.')}</p>`;
+    $('dashJobs').innerHTML = filtered.map(jobCard).join('');
+  }
+  wireJobButtons();
+}
+
+$('dashSearchBtn')?.addEventListener('click', () => renderCandidateDashboardJobs());
+$('dashSearchKeyword')?.addEventListener('input', () => renderCandidateDashboardJobs());
+$('dashSearchLocation')?.addEventListener('change', () => renderCandidateDashboardJobs());
+$('dashSearchReset')?.addEventListener('click', () => {
+  if ($('dashSearchKeyword')) $('dashSearchKeyword').value = '';
+  if ($('dashSearchLocation')) $('dashSearchLocation').value = '';
+  renderCandidateDashboardJobs();
+});
+
 function uploadResume(fileInputId, done) {
   return async (e) => {
     e.preventDefault();
@@ -294,21 +324,69 @@ async function loadRecommendedTeaser() {
     wireJobButtons();
   } catch { /* teaser is optional; all jobs still load */ }
 }
+
+const distinctLocations = new Set(['Remote', 'Ahmedabad', 'Surat', 'Vadodara', 'Bangalore', 'Mumbai']);
+function updateLocationOptions() {
+  const optionsHtml = '<option value="">All Locations</option>' +
+    Array.from(distinctLocations).sort().map((loc) => `<option value="${loc}">${loc}</option>`).join('');
+
+  const jobLoc = $('jobLocation');
+  const dashLoc = $('dashSearchLocation');
+  if (jobLoc && jobLoc.children.length <= 7) {
+    const cur = jobLoc.value;
+    jobLoc.innerHTML = optionsHtml;
+    jobLoc.value = cur;
+  }
+  if (dashLoc && dashLoc.children.length <= 7) {
+    const cur = dashLoc.value;
+    dashLoc.innerHTML = optionsHtml;
+    dashLoc.value = cur;
+  }
+}
+
 async function loadJobs() {
   try {
-    const q = $('jobSearch').value.trim().toLowerCase();
-    const res = await fetch(`/api/jobs?page=${page}&limit=${limit}`).then((r) => r.json());
+    const kw = ($('jobKeyword')?.value || '').trim();
+    const loc = ($('jobLocation')?.value || '').trim();
+
+    const queryParams = new URLSearchParams({ page, limit });
+    if (kw) queryParams.set('keyword', kw);
+    if (loc && loc.toLowerCase() !== 'all locations') queryParams.set('location', loc);
+
+    const res = await fetch(`/api/jobs?${queryParams.toString()}`).then((r) => r.json());
     let rows = res.data || [];
     cache = rows;
-    if (q) rows = rows.filter((j) => `${j.title} ${j.company} ${j.location}`.toLowerCase().includes(q));
-    $('jobsGrid').innerHTML = rows.length ? rows.map(jobCard).join('') : '<p class="muted">No jobs found.</p>';
+
+    rows.forEach((j) => {
+      if (j.location) distinctLocations.add(j.location.trim());
+    });
+    updateLocationOptions();
+
+    // Secondary client filter for instant multi-field match
+    if (kw) {
+      const q = kw.toLowerCase();
+      rows = rows.filter((j) => `${j.title} ${j.company} ${j.location || ''} ${skillList(j.skills).join(' ')}`.toLowerCase().includes(q));
+    }
+    if (loc && loc.toLowerCase() !== 'all locations') {
+      rows = rows.filter((j) => (j.location || '').toLowerCase().includes(loc.toLowerCase()));
+    }
+
+    $('jobsGrid').innerHTML = rows.length ? rows.map(jobCard).join('') : '<p class="muted">No jobs found matching your criteria.</p>';
     $('pageInfo').textContent = `Page ${res.pagination?.page || page} of ${res.pagination?.totalPages || 1} (${res.pagination?.total || rows.length} jobs)`;
     wireJobButtons();
   } catch (err) { toast(err.message); }
 }
+
 $('modalClose').addEventListener('click', () => $('jobModal').classList.add('hidden'));
-$('refreshJobs').addEventListener('click', loadJobs);
-$('jobSearch').addEventListener('input', loadJobs);
+$('searchJobsBtn')?.addEventListener('click', () => { page = 1; loadJobs(); });
+$('refreshJobs')?.addEventListener('click', () => {
+  if ($('jobKeyword')) $('jobKeyword').value = '';
+  if ($('jobLocation')) $('jobLocation').value = '';
+  page = 1;
+  loadJobs();
+});
+$('jobKeyword')?.addEventListener('input', () => { page = 1; loadJobs(); });
+$('jobLocation')?.addEventListener('change', () => { page = 1; loadJobs(); });
 $('prevPage').addEventListener('click', () => { if (page > 1) { page--; loadJobs(); } });
 $('nextPage').addEventListener('click', () => { page++; loadJobs(); });
 
@@ -320,16 +398,137 @@ async function loadApplications() {
     $('appsList').innerHTML = res.data.length ? res.data.map((a) => `<div class="card"><b>${a.Job?.title}</b> <span class="muted">@ ${a.Job?.company}</span><br/><span class="pill ${STATUS_CLASS[a.status] || ''}">${a.status}</span> <span class="muted">applied ${new Date(a.applied_at).toLocaleString()}</span></div>`).join('') : '<p class="muted">No applications yet. Apply from Jobs.</p>';
   } catch (err) { toast(err.message); }
 }
+
 async function loadProfile() {
   try {
     const res = await api('/api/users/me');
     const skills = skillList(res.data.skills);
     const tags = skills.map((s) => `<span class="skill-tag">${s}</span>`).join('') || '<span class="muted">No skills detected yet — upload a text-based resume.</span>';
-    $('profileBox').innerHTML = `<p><b>${res.data.name}</b><br/>${res.data.email}<br/><span class="muted">${res.data.resume_url ? `Resume: <a href="${res.data.resume_url}" target="_blank">view</a>` : 'No resume uploaded'}</span></p><div><b>Detected skills</b><br/>${tags}</div>`;
-    $('resumeLink').innerHTML = res.data.resume_url ? `<p><a href="${res.data.resume_url}" target="_blank">View current resume</a></p>` : '';
+    
+    if ($('profileNameInput')) $('profileNameInput').value = res.data.name || '';
+    if ($('profileEmailInput')) $('profileEmailInput').value = res.data.email || '';
+    if ($('profileSkillsBox')) $('profileSkillsBox').innerHTML = tags;
+    if ($('resumeLink')) $('resumeLink').innerHTML = res.data.resume_url ? `<p><a href="${res.data.resume_url}" target="_blank">View current resume</a></p>` : '<span class="muted">No resume uploaded yet</span>';
   } catch (err) { toast(err.message); }
 }
+
+$('profileUpdateForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = $('profileNameInput').value.trim();
+  if (!name) return toast('Name is required');
+  try {
+    const res = await api('/api/users/profile', { method: 'PUT', body: JSON.stringify({ name }) });
+    localStorage.setItem('name', res.data.name);
+    renderNav();
+    toast('Profile name updated successfully');
+  } catch (err) { toast(err.message); }
+});
+
+$('changePasswordForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const currentPassword = $('currentPwInput').value;
+  const newPassword = $('newPwInput').value;
+  const confirmPassword = $('confirmNewPwInput').value;
+
+  if (newPassword !== confirmPassword) return toast('New passwords do not match');
+  if (newPassword.length < 6) return toast('New password must be at least 6 characters');
+
+  try {
+    await api('/api/users/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    toast('Password updated successfully');
+    e.target.reset();
+  } catch (err) { toast(err.message); }
+});
+
 $('resumeForm').addEventListener('submit', uploadResume('resumeFile', () => { loadProfile(); location.hash = '#/dashboard'; }));
+
+// ---------- Voice Search (Speech Recognition) ----------
+function setupVoiceSearch(micBtnId, inputId, onSearchCallback) {
+  const micBtn = $(micBtnId);
+  const input = $(inputId);
+  if (!micBtn || !input) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toast('Voice search is not supported in this browser. Please use Chrome or Edge.');
+    });
+    return;
+  }
+
+  let recognition = null;
+  try {
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      micBtn.classList.add('listening');
+      micBtn.title = 'Listening... Speak now';
+      toast('🎙️ Listening... Speak your job title or keyword');
+    };
+
+    recognition.onresult = (event) => {
+      if (event.results && event.results[0] && event.results[0][0]) {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+        toast(`Voice input: "${transcript}"`);
+        if (onSearchCallback) onSearchCallback();
+      }
+    };
+
+    recognition.onerror = (event) => {
+      micBtn.classList.remove('listening');
+      if (event.error !== 'no-speech') {
+        toast('Voice search: ' + (event.error || 'Could not recognize speech'));
+      }
+    };
+
+    recognition.onend = () => {
+      micBtn.classList.remove('listening');
+      micBtn.title = 'Search by voice';
+    };
+
+    micBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      try {
+        recognition.start();
+      } catch (err) {
+        recognition.stop();
+      }
+    });
+  } catch (err) {
+    console.warn('Speech recognition error:', err);
+  }
+}
+
+// ---------- Password Show/Hide Toggle ----------
+function wirePasswordToggles() {
+  document.querySelectorAll('.btn-toggle-pw').forEach((btn) => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = 'true';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const wrap = btn.closest('.password-wrap');
+      if (!wrap) return;
+      const input = wrap.querySelector('input');
+      if (!input) return;
+      const isPw = input.type === 'password';
+      input.type = isPw ? 'text' : 'password';
+      const openEye = btn.querySelector('.eye-open');
+      const closedEye = btn.querySelector('.eye-closed');
+      if (openEye) openEye.classList.toggle('hidden', isPw);
+      if (closedEye) closedEye.classList.toggle('hidden', !isPw);
+      btn.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
+    });
+  });
+}
 
 // ---------- company: dashboard / jobs / applications ----------
 let coJobsCache = [];
@@ -480,5 +679,8 @@ $('appJobFilter').addEventListener('change', renderCompanyApps);
 $('appStatusFilter').addEventListener('change', renderCompanyApps);
 
 // ---------- init ----------
+wirePasswordToggles();
+setupVoiceSearch('jobMicBtn', 'jobKeyword', () => { page = 1; loadJobs(); });
+setupVoiceSearch('dashMicBtn', 'dashSearchKeyword', () => { renderCandidateDashboardJobs(); });
 renderNav();
 route();

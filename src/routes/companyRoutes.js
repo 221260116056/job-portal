@@ -22,6 +22,8 @@ router.post('/auth/login', [
 // Everything below requires a company JWT. Company identity always comes from the token.
 router.use(requireCompany);
 router.get('/me', companyAuth.me);
+router.put('/profile', companyAuth.updateProfile);
+router.put('/change-password', companyAuth.changePassword);
 router.get('/jobs', companyJobs.list);
 const jobValidators = [
   body('title').trim().notEmpty().withMessage('Title is required'),

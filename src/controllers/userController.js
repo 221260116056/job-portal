@@ -63,4 +63,35 @@ exports.uploadResume = async (req, res, next) => {
   } catch (error) { await fs.unlink(req.file.path).catch(() => {}); next(error); }
 };
 
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ success: false, message: 'Name is required' });
+    await req.user.update({ name: name.trim() });
+    return success(res, 'Profile updated successfully', publicUser(req.user));
+  } catch (error) { next(error); }
+};
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Current password and new password are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+    const bcrypt = require('bcryptjs');
+    const userWithPassword = await User.unscoped().findByPk(req.user.id);
+    if (!userWithPassword) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const valid = await bcrypt.compare(currentPassword, userWithPassword.password);
+    if (!valid) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await userWithPassword.update({ password: hashedPassword });
+    return success(res, 'Password updated successfully');
+  } catch (error) { next(error); }
+};
+
 exports.readSkills = readSkills;

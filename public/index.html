@@ -39,6 +39,38 @@
     <!-- Candidate dashboard -->
     <section id="view-dashboard" class="view">
       <h2 id="dashHello">Candidate Dashboard</h2>
+      
+      <!-- Candidate Dashboard Search Bar -->
+      <div class="search-bar-container card">
+        <div class="search-bar-header">
+          <h3>Search Jobs & Internships</h3>
+          <span class="muted font-xs">Filter recommendations or search all available positions</span>
+        </div>
+        <div class="search-inputs-wrap">
+          <div class="search-field with-icon">
+            <span class="search-icon">🔍</span>
+            <input id="dashSearchKeyword" type="text" placeholder="Job title, keyword, skill, or company..." />
+            <button type="button" id="dashMicBtn" class="mic-btn" title="Search by voice" aria-label="Voice Search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+          </div>
+          <div class="search-field with-icon loc-field">
+            <span class="search-icon">📍</span>
+            <select id="dashSearchLocation">
+              <option value="">All Locations</option>
+              <option value="Remote">Remote</option>
+              <option value="Ahmedabad">Ahmedabad</option>
+              <option value="Surat">Surat</option>
+              <option value="Vadodara">Vadodara</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Mumbai">Mumbai</option>
+            </select>
+          </div>
+          <button id="dashSearchBtn" class="btn btn-primary">Search</button>
+          <button id="dashSearchReset" class="btn btn-ghost" title="Reset filter">Reset</button>
+        </div>
+      </div>
+
       <div class="grid-2">
         <div class="card">
           <h3>Resume</h3>
@@ -69,11 +101,38 @@
       <div id="noResumeBanner" class="card hidden">
         <p>Upload your resume to get personalized job recommendations. <a href="#/dashboard">Upload Resume</a></p>
       </div>
-      <h3>All Jobs</h3>
-      <div class="toolbar">
-        <input id="jobSearch" type="search" placeholder="Search title, company, location..." />
-        <button id="refreshJobs" class="btn">Refresh</button>
+      
+      <!-- Enhanced Search with Title/Keyword + Location + Voice Search -->
+      <div class="search-bar-container card">
+        <div class="search-bar-header">
+          <h3>Explore Opportunities</h3>
+          <span class="muted font-xs">Filter by title, company, skill or location</span>
+        </div>
+        <div class="search-inputs-wrap">
+          <div class="search-field with-icon">
+            <span class="search-icon">🔍</span>
+            <input id="jobKeyword" type="text" placeholder="Job title, keyword, skill, or company..." />
+            <button type="button" id="jobMicBtn" class="mic-btn" title="Search by voice" aria-label="Voice Search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+          </div>
+          <div class="search-field with-icon loc-field">
+            <span class="search-icon">📍</span>
+            <select id="jobLocation">
+              <option value="">All Locations</option>
+              <option value="Remote">Remote</option>
+              <option value="Ahmedabad">Ahmedabad</option>
+              <option value="Surat">Surat</option>
+              <option value="Vadodara">Vadodara</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Mumbai">Mumbai</option>
+            </select>
+          </div>
+          <button id="searchJobsBtn" class="btn btn-primary">Search</button>
+          <button id="refreshJobs" class="btn btn-ghost" title="Reset search">Reset</button>
+        </div>
       </div>
+
       <div id="jobsGrid" class="jobs-grid"></div>
       <div class="pagination">
         <button id="prevPage" class="btn btn-ghost">← Prev</button>
@@ -88,7 +147,15 @@
         <h2>Candidate Login</h2>
         <form id="loginForm">
           <label>Email<input type="email" id="loginEmail" required placeholder="vraj@example.com" /></label>
-          <label>Password<input type="password" id="loginPassword" required placeholder="Password@123" /></label>
+          <label>Password
+            <div class="password-wrap">
+              <input type="password" id="loginPassword" required placeholder="Password@123" />
+              <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </label>
           <button class="btn btn-primary" type="submit">Login</button>
           <p class="muted switch-line">New here? <a href="#/register">Create an account</a> · <a href="#/company/login">Company login</a></p>
         </form>
@@ -101,8 +168,24 @@
         <form id="registerForm">
           <label>Full Name<input type="text" id="regName" required placeholder="Vraj Vekariya" /></label>
           <label>Email<input type="email" id="regEmail" required placeholder="vraj@example.com" /></label>
-          <label>Password<input type="password" id="regPassword" required minlength="6" placeholder="Min 6 characters" /></label>
-          <label>Confirm Password<input type="password" id="regConfirm" required minlength="6" placeholder="Repeat password" /></label>
+          <label>Password
+            <div class="password-wrap">
+              <input type="password" id="regPassword" required minlength="6" placeholder="Min 6 characters" />
+              <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </label>
+          <label>Confirm Password
+            <div class="password-wrap">
+              <input type="password" id="regConfirm" required minlength="6" placeholder="Repeat password" />
+              <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </label>
           <button class="btn btn-secondary" type="submit">Create Account</button>
           <p class="muted switch-line">Already have an account? <a href="#/login">Login</a></p>
         </form>
@@ -118,21 +201,74 @@
       </div>
     </section>
 
-    <!-- Candidate: profile -->
+    <!-- Candidate: profile (Name Update + Password Update + Resume) -->
     <section id="view-profile" class="view">
+      <h2>My Account & Profile</h2>
       <div class="grid-2">
+        <!-- Edit Profile Name -->
         <div class="card">
-          <h2>Profile</h2>
-          <div id="profileBox">Login to view profile.</div>
+          <h3>Account Information</h3>
+          <form id="profileUpdateForm">
+            <label>Full Name
+              <input type="text" id="profileNameInput" required placeholder="Your name" />
+            </label>
+            <label>Email Address
+              <input type="email" id="profileEmailInput" disabled class="disabled-input" title="Email cannot be changed" />
+            </label>
+            <button class="btn btn-primary" type="submit">Save Name</button>
+          </form>
+          <div class="divider"></div>
+          <div>
+            <b>Detected Skills</b>
+            <div id="profileSkillsBox" class="mt-2"></div>
+          </div>
         </div>
+
+        <!-- Change Password -->
         <div class="card">
-          <h2>Resume</h2>
+          <h3>Change Password</h3>
+          <p class="muted font-xs">Keep your account secure with a strong password (min 6 characters).</p>
+          <form id="changePasswordForm">
+            <label>Current Password
+              <div class="password-wrap">
+                <input type="password" id="currentPwInput" required placeholder="Enter current password" />
+                <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                  <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+            </label>
+            <label>New Password
+              <div class="password-wrap">
+                <input type="password" id="newPwInput" required minlength="6" placeholder="At least 6 characters" />
+                <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                  <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+            </label>
+            <label>Confirm New Password
+              <div class="password-wrap">
+                <input type="password" id="confirmNewPwInput" required minlength="6" placeholder="Repeat new password" />
+                <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                  <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+            </label>
+            <button class="btn btn-secondary" type="submit">Update Password</button>
+          </form>
+        </div>
+
+        <!-- Resume card -->
+        <div class="card span-2">
+          <h3>Resume Management</h3>
           <p class="muted">PDF / DOCX best, DOC best-effort, max 5 MB. Uploading refreshes your skill-matched jobs.</p>
           <form id="resumeForm">
             <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
-            <button class="btn btn-primary" type="submit">Upload resume</button>
+            <button class="btn btn-primary" type="submit">Upload Resume</button>
           </form>
-          <div id="resumeLink"></div>
+          <div id="resumeLink" class="mt-2"></div>
         </div>
       </div>
     </section>
@@ -143,7 +279,15 @@
         <h2>Company Login</h2>
         <form id="companyLoginForm">
           <label>Company Email<input type="email" id="coLoginEmail" required placeholder="hr@company.com" /></label>
-          <label>Password<input type="password" id="coLoginPassword" required /></label>
+          <label>Password
+            <div class="password-wrap">
+              <input type="password" id="coLoginPassword" required placeholder="Password@123" />
+              <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </label>
           <button class="btn btn-primary" type="submit">Company Login</button>
           <p class="muted switch-line">New company? <a href="#/company/register">Register company</a> · <a href="#/login">Candidate login</a></p>
         </form>
@@ -156,8 +300,24 @@
         <form id="companyRegisterForm">
           <label>Company Name<input type="text" id="coRegName" required placeholder="ABC Technologies" /></label>
           <label>Company Email<input type="email" id="coRegEmail" required placeholder="hr@company.com" /></label>
-          <label>Password<input type="password" id="coRegPassword" required minlength="6" /></label>
-          <label>Confirm Password<input type="password" id="coRegConfirm" required minlength="6" /></label>
+          <label>Password
+            <div class="password-wrap">
+              <input type="password" id="coRegPassword" required minlength="6" placeholder="Min 6 characters" />
+              <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </label>
+          <label>Confirm Password
+            <div class="password-wrap">
+              <input type="password" id="coRegConfirm" required minlength="6" placeholder="Repeat password" />
+              <button type="button" class="btn-toggle-pw" aria-label="Toggle password visibility">
+                <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-closed hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </label>
           <label>Company Location<input type="text" id="coRegLocation" required placeholder="Ahmedabad" /></label>
           <label>Company Website (optional)<input type="url" id="coRegWebsite" placeholder="https://example.com" /></label>
           <button class="btn btn-secondary" type="submit">Register Company</button>

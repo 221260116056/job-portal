@@ -3,6 +3,8 @@ const { requireCandidate } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
 const controller = require('../controllers/userController');
 router.get('/me', requireCandidate, controller.me);
+router.put('/profile', requireCandidate, controller.updateProfile);
+router.put('/change-password', requireCandidate, controller.changePassword);
 router.get('/skills', requireCandidate, controller.skills);
 router.post('/resume', requireCandidate, upload, controller.uploadResume);
 module.exports = router;

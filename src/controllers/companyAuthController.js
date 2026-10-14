@@ -36,4 +36,39 @@ exports.login = async (req, res, next) => {
 };
 
 exports.me = (req, res) => success(res, 'Company profile retrieved successfully', { ...publicCompany(req.company), role: COMPANY });
+
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { company_name, location, website } = req.body;
+    if (!company_name || !company_name.trim()) return res.status(400).json({ success: false, message: 'Company name is required' });
+    await req.company.update({
+      company_name: company_name.trim(),
+      location: location ? location.trim() : req.company.location,
+      website: website !== undefined ? (website ? website.trim() : null) : req.company.website
+    });
+    return success(res, 'Company profile updated successfully', { ...publicCompany(req.company), role: COMPANY });
+  } catch (error) { next(error); }
+};
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Current password and new password are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+    const companyWithPw = await Company.unscoped().findByPk(req.company.id);
+    if (!companyWithPw) return res.status(404).json({ success: false, message: 'Company not found' });
+
+    const valid = await bcrypt.compare(currentPassword, companyWithPw.password);
+    if (!valid) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await companyWithPw.update({ password: hashedPassword });
+    return success(res, 'Password updated successfully');
+  } catch (error) { next(error); }
+};
+
 exports.publicCompany = publicCompany;
