@@ -73,13 +73,16 @@
 
       <div class="grid-2">
         <div class="card">
-          <h3>Resume</h3>
+          <div class="card-top">
+            <h3>Resume</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnDashViewHireFlowResume">🌟 View HireFlow Resume</button>
+          </div>
           <form id="dashResumeForm">
             <input type="file" id="dashResumeFile" accept=".pdf,.doc,.docx" required />
             <button class="btn btn-primary" type="submit">Upload Resume</button>
           </form>
           <div id="dashResumeLink"></div>
-          <p class="muted">Uploading a new resume replaces skills and recommendations instantly.</p>
+          <p class="muted font-xs">Uploading a new resume replaces skills and recommendations instantly.</p>
         </div>
         <div class="card">
           <h3>Detected Skills</h3>
@@ -262,7 +265,10 @@
 
         <!-- Resume card -->
         <div class="card span-2">
-          <h3>Resume Management</h3>
+          <div class="card-top">
+            <h3>Resume Management</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnProfileViewHireFlowResume">🌟 View HireFlow Resume</button>
+          </div>
           <p class="muted">PDF / DOCX best, DOC best-effort, max 5 MB. Uploading refreshes your skill-matched jobs.</p>
           <form id="resumeForm">
             <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
@@ -419,6 +425,117 @@
     <div class="modal-card">
       <button id="modalClose" class="btn btn-ghost">✕</button>
       <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Apply Modal with HireFlow Resume & Upload Option -->
+  <div id="applyModal" class="modal hidden">
+    <div class="modal-card apply-modal-card">
+      <div class="modal-header">
+        <div>
+          <h2>Apply for Position</h2>
+          <p id="applyJobSubtitle" class="muted font-xs">Submit your application</p>
+        </div>
+        <button id="applyModalClose" class="btn btn-ghost">✕</button>
+      </div>
+
+      <div class="apply-job-banner">
+        <h3 id="applyJobTitle">Job Title</h3>
+        <p id="applyJobMeta" class="muted">Company • Location</p>
+      </div>
+
+      <form id="jobApplicationForm">
+        <div class="resume-selection-section">
+          <h4>Choose Resume to Submit</h4>
+          
+          <!-- Option 1: HireFlow Resume -->
+          <label class="resume-option-card selected" id="optHireFlowCard">
+            <input type="radio" name="applyResumeType" value="hireflow" id="optHireFlow" checked />
+            <div class="option-details">
+              <div class="option-title">
+                <span>🌟 <b>HireFlow Profile Resume</b></span>
+                <span class="pill good">Verified</span>
+              </div>
+              <p class="muted font-xs" id="applyHireFlowStatus">Using your saved HireFlow candidate profile & resume.</p>
+              <div class="option-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="btnPreviewHireFlowResume">Preview HireFlow Resume</button>
+              </div>
+            </div>
+          </label>
+
+          <!-- Option 2: Upload New Resume -->
+          <label class="resume-option-card" id="optUploadCard">
+            <input type="radio" name="applyResumeType" value="upload" id="optUpload" />
+            <div class="option-details">
+              <div class="option-title">
+                <span>📤 <b>Upload New Resume</b></span>
+                <span class="pill">Custom PDF / DOCX</span>
+              </div>
+              <p class="muted font-xs">Upload a customized resume specifically for this position (max 5 MB).</p>
+              <div id="applyUploadSection" class="hidden mt-2">
+                <input type="file" id="applyResumeFile" accept=".pdf,.doc,.docx" />
+                <span id="applyUploadStatus" class="muted font-xs"></span>
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <div class="mt-3">
+          <label>Cover Note (Optional)
+            <textarea id="applyNote" rows="2" placeholder="Brief note to the hiring manager or why you're a great fit..."></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions mt-3">
+          <button type="button" id="applyCancelBtn" class="btn btn-ghost">Cancel</button>
+          <button type="submit" id="applySubmitBtn" class="btn btn-primary">Submit Application</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- HireFlow Digital Resume Preview Modal -->
+  <div id="hireflowResumeModal" class="modal hidden">
+    <div class="modal-card resume-preview-card">
+      <div class="modal-header">
+        <div class="hf-resume-badge">🌟 HireFlow Verified Resume</div>
+        <button id="resumeModalClose" class="btn btn-ghost">✕</button>
+      </div>
+
+      <div class="hireflow-resume-sheet" id="hireflowResumeContent">
+        <div class="hf-resume-header">
+          <div>
+            <h1 id="hfResumeName">Candidate Name</h1>
+            <p id="hfResumeEmail" class="hf-email">candidate@example.com</p>
+          </div>
+          <div class="hf-brand-stamp">
+            <strong>HireFlow</strong>
+            <span>Verified Profile</span>
+          </div>
+        </div>
+
+        <div class="hf-divider"></div>
+
+        <div class="hf-section">
+          <h3>Professional Profile</h3>
+          <p id="hfResumeSummary" class="hf-text">Enthusiastic and motivated candidate applying through HireFlow. Ready to contribute technical expertise and achieve results.</p>
+        </div>
+
+        <div class="hf-section">
+          <h3>Verified Technical & Core Skills</h3>
+          <div id="hfResumeSkills" class="hf-skills-grid"></div>
+        </div>
+
+        <div class="hf-section">
+          <h3>Attached Original Document</h3>
+          <div id="hfResumeDocLink" class="muted">No original document attached.</div>
+        </div>
+      </div>
+
+      <div class="modal-actions mt-3">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnPrintResume">🖨️ Print / Save as PDF</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnCloseResume">Close</button>
+      </div>
     </div>
   </div>
 

@@ -213,21 +213,86 @@ function jobCard(j) {
 function trackJobs(rows) {
   rows.forEach((j) => { if (!cache.some((c) => c.id === j.id)) cache.push(j); });
 }
+let applyingJob = null;
+let candidateProfileCache = null;
+
+async function getCandidateProfile() {
+  if (candidateProfileCache) return candidateProfileCache;
+  try {
+    const res = await api('/api/users/me');
+    candidateProfileCache = res.data;
+    return candidateProfileCache;
+  } catch { return null; }
+}
+
+async function showHireFlowResumeModal(customUser = null) {
+  const profile = customUser || await getCandidateProfile();
+  if (!profile) return toast('Candidate profile not found. Please log in.');
+
+  $('hfResumeName').textContent = profile.name || 'Candidate';
+  $('hfResumeEmail').textContent = profile.email || '';
+  
+  const skills = skillList(profile.skills);
+  $('hfResumeSkills').innerHTML = skills.length
+    ? skills.map((s) => `<span class="skill-tag">${s}</span>`).join('')
+    : '<span class="muted font-xs">No technical skills detected yet. Upload a resume to automatically extract skills.</span>';
+
+  if (profile.resume_url) {
+    $('hfResumeDocLink').innerHTML = `<a href="${profile.resume_url}" target="_blank" class="btn btn-ghost btn-sm">📄 View Original Uploaded Document</a>`;
+  } else {
+    $('hfResumeDocLink').textContent = 'No original document uploaded yet.';
+  }
+
+  $('hireflowResumeModal').classList.remove('hidden');
+}
+
+async function openApplyModal(jobId) {
+  if (!isCandidate()) {
+    location.hash = '#/login';
+    return toast(isCompany() ? 'Companies cannot apply — login as a candidate' : 'Login as a candidate to apply');
+  }
+
+  const j = cache.find((x) => x.id === jobId);
+  if (!j) return toast('Job details not found');
+  applyingJob = j;
+
+  $('jobModal')?.classList.add('hidden');
+
+  $('applyJobTitle').textContent = j.title;
+  $('applyJobMeta').textContent = `${j.company} • ${j.location || 'Remote'} • ${j.employment_type || 'Full-time'}`;
+  $('applyJobSubtitle').textContent = `Select your resume to submit to ${j.company}`;
+
+  const profile = await getCandidateProfile();
+  if (profile) {
+    if (profile.resume_url) {
+      $('applyHireFlowStatus').innerHTML = `Current resume: <a href="${profile.resume_url}" target="_blank">View attached resume</a>. Verified skills: ${skillList(profile.skills).slice(0, 5).join(', ')}`;
+    } else {
+      $('applyHireFlowStatus').textContent = `Using your HireFlow Profile Resume with verified skills: ${skillList(profile.skills).join(', ') || 'No skills uploaded yet'}`;
+    }
+  }
+
+  $('optHireFlow').checked = true;
+  $('optHireFlowCard').classList.add('selected');
+  $('optUploadCard').classList.remove('selected');
+  $('applyUploadSection').classList.add('hidden');
+  $('applyResumeFile').value = '';
+  $('applyNote').value = '';
+  $('applyUploadStatus').textContent = '';
+
+  $('applyModal').classList.remove('hidden');
+}
+
 function wireJobButtons(root = document) {
-  root.querySelectorAll('[data-apply]').forEach((b) => b.addEventListener('click', async () => {
-    if (!isCandidate()) { location.hash = '#/login'; return toast(isCompany() ? 'Companies cannot apply — login as a candidate' : 'Login as a candidate to apply'); }
-    try { await api('/api/applications', { method: 'POST', body: JSON.stringify({ job_id: b.dataset.apply }) }); toast('Application submitted!'); }
-    catch (err) { toast(err.message); }
+  root.querySelectorAll('[data-apply]').forEach((b) => b.addEventListener('click', () => {
+    openApplyModal(b.dataset.apply);
   }));
   root.querySelectorAll('[data-details]').forEach((b) => b.addEventListener('click', () => {
     const j = cache.find((x) => x.id === b.dataset.details);
     if (!j) return;
     $('modalBody').innerHTML = `<span class="pill">${j.employment_type} • ${j.location}</span><h2>${j.title}</h2><p class="muted">${j.company}</p>${j.match_percentage > 0 ? `<p><span class="match-badge">${j.match_percentage}% Match</span> <span class="muted">on ${(j.matched_skills || []).map((s) => `✓ ${s}`).join(' · ')}</span></p>` : ''}<p>${j.description}</p><p><b>Required skills:</b> ${skillList(j.skills).join(', ') || '-'}</p><button class="btn btn-primary" id="modalApply">Apply for this job</button>`;
     $('jobModal').classList.remove('hidden');
-    $('modalApply').addEventListener('click', async () => {
-      if (!isCandidate()) { $('jobModal').classList.add('hidden'); location.hash = '#/login'; return toast('Login as a candidate to apply'); }
-      try { await api('/api/applications', { method: 'POST', body: JSON.stringify({ job_id: j.id }) }); toast('Application submitted!'); $('jobModal').classList.add('hidden'); }
-      catch (err) { toast(err.message); }
+    $('modalApply').addEventListener('click', () => {
+      openApplyModal(j.id);
     });
   }));
 }
@@ -443,7 +508,83 @@ $('changePasswordForm')?.addEventListener('submit', async (e) => {
   } catch (err) { toast(err.message); }
 });
 
-$('resumeForm').addEventListener('submit', uploadResume('resumeFile', () => { loadProfile(); location.hash = '#/dashboard'; }));
+$('resumeForm').addEventListener('submit', uploadResume('resumeFile', () => { candidateProfileCache = null; loadProfile(); location.hash = '#/dashboard'; }));
+
+// ---------- Apply Modal & Resume Selection Flow ----------
+$('optHireFlow')?.addEventListener('change', () => {
+  $('optHireFlowCard')?.classList.add('selected');
+  $('optUploadCard')?.classList.remove('selected');
+  $('applyUploadSection')?.classList.add('hidden');
+});
+$('optUpload')?.addEventListener('change', () => {
+  $('optUploadCard')?.classList.add('selected');
+  $('optHireFlowCard')?.classList.remove('selected');
+  $('applyUploadSection')?.classList.remove('hidden');
+});
+$('applyModalClose')?.addEventListener('click', () => $('applyModal')?.classList.add('hidden'));
+$('applyCancelBtn')?.addEventListener('click', () => $('applyModal')?.classList.add('hidden'));
+
+$('btnPreviewHireFlowResume')?.addEventListener('click', () => showHireFlowResumeModal());
+$('btnDashViewHireFlowResume')?.addEventListener('click', () => showHireFlowResumeModal());
+$('btnProfileViewHireFlowResume')?.addEventListener('click', () => showHireFlowResumeModal());
+$('resumeModalClose')?.addEventListener('click', () => $('hireflowResumeModal')?.classList.add('hidden'));
+$('btnCloseResume')?.addEventListener('click', () => $('hireflowResumeModal')?.classList.add('hidden'));
+$('btnPrintResume')?.addEventListener('click', () => window.print());
+
+$('applyResumeFile')?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    $('applyUploadStatus').textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+  }
+});
+
+$('jobApplicationForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!applyingJob) return;
+
+  const resumeType = document.querySelector('input[name="applyResumeType"]:checked')?.value || 'hireflow';
+  const note = $('applyNote')?.value || '';
+  const submitBtn = $('applySubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting Application...';
+
+  try {
+    let customResumeUrl = null;
+    if (resumeType === 'upload') {
+      const file = $('applyResumeFile')?.files[0];
+      if (!file) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Application';
+        return toast('Please choose a resume file (.pdf, .docx)');
+      }
+      toast('Uploading customized resume...');
+      const fd = new FormData();
+      fd.append('resume', file);
+      const uploadRes = await api('/api/users/resume', { method: 'POST', body: fd });
+      customResumeUrl = uploadRes.data.resume_url;
+      candidateProfileCache = null;
+    }
+
+    await api('/api/applications', {
+      method: 'POST',
+      body: JSON.stringify({
+        job_id: applyingJob.id,
+        resume_type: resumeType,
+        resume_url: customResumeUrl,
+        note
+      })
+    });
+
+    toast('🎉 Application submitted successfully with your chosen resume!');
+    $('applyModal')?.classList.add('hidden');
+    candidateProfileCache = null;
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Application';
+  }
+});
 
 // ---------- Voice Search (Speech Recognition) ----------
 function setupVoiceSearch(micBtnId, inputId, onSearchCallback) {
@@ -658,12 +799,35 @@ async function loadCompanyApplications() {
 function renderCompanyApps() {
   const jf = $('appJobFilter').value, sf = $('appStatusFilter').value;
   const rows = coAppsCache.filter((a) => (!jf || a.job?.id === jf) && (!sf || a.status === sf));
-  $('companyAppsList').innerHTML = rows.length ? rows.map((a) => `
-    <div class="card"><b>${a.candidate?.name}</b> <span class="muted">${a.candidate?.email}</span><br/>
-    <span class="muted">Applied for <b>${a.job?.title}</b> • ${new Date(a.applied_at).toLocaleString()}</span><br/>
-    ${a.candidate?.resume_url ? `<a href="${a.candidate.resume_url}" target="_blank">View Resume</a> · ` : '<span class="muted">No resume · </span>'}
-    <span class="pill ${STATUS_CLASS[a.status] || ''}">${a.status}</span>
-    <div class="job-actions"><select data-status="${a.id}">${['Applied', 'Under Review', 'Shortlisted', 'Rejected'].map((s) => `<option ${s === a.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div></div>`).join('')
+  $('companyAppsList').innerHTML = rows.length ? rows.map((a) => {
+    const resumeLabel = a.resume_type === 'custom' ? 'Custom Uploaded Resume' : 'HireFlow Profile Resume';
+    const skills = skillList(a.candidate?.skills);
+    return `
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <b>${a.candidate?.name || 'Applicant'}</b>
+            <span class="muted font-xs"> (${a.candidate?.email || ''})</span>
+          </div>
+          <span class="pill ${STATUS_CLASS[a.status] || ''}">${a.status}</span>
+        </div>
+        <div class="muted mt-2">Applied for <b>${a.job?.title}</b> • ${new Date(a.applied_at).toLocaleString()}</div>
+        ${a.note ? `<div class="mt-2 font-xs muted"><b>Note:</b> ${a.note}</div>` : ''}
+        ${skills.length ? `<div class="card-skills mt-2">${skills.slice(0, 6).map((s) => `<span class="skill-tag">${s}</span>`).join('')}</div>` : ''}
+        <div class="card-footer mt-3">
+          <div>
+            ${a.resume_url
+              ? `<a href="${a.resume_url}" target="_blank" class="btn btn-sm">📄 ${resumeLabel}</a>`
+              : '<span class="muted font-xs">No resume document attached</span>'}
+          </div>
+          <div class="job-actions">
+            <select data-status="${a.id}">
+              ${['Applied', 'Under Review', 'Shortlisted', 'Rejected'].map((s) => `<option ${s === a.status ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>`;
+  }).join('')
     : '<p class="muted">No applications found.</p>';
   document.querySelectorAll('[data-status]').forEach((sel) => sel.addEventListener('change', async () => {
     try {

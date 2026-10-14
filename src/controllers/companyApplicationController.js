@@ -12,15 +12,25 @@ exports.list = async (req, res, next) => {
     const apps = await Application.findAll({
       where: { job_id: jobIds },
       include: [
-        { model: User, attributes: ['id', 'name', 'email', 'resume_url'] },
+        { model: User, attributes: ['id', 'name', 'email', 'resume_url', 'skills'] },
         { model: Job, attributes: ['id', 'title'] },
       ],
       order: [['applied_at', 'DESC']],
     });
+    const { readSkills } = require('./userController');
     return success(res, 'Company applications retrieved successfully', apps.map((a) => ({
       id: a.id,
       status: a.status,
-      candidate: a.User ? { name: a.User.name, email: a.User.email, resume_url: a.User.resume_url } : null,
+      resume_type: a.resume_type || 'hireflow',
+      resume_url: a.resume_url || (a.User ? a.User.resume_url : null),
+      note: a.note || null,
+      candidate: a.User ? {
+        id: a.User.id,
+        name: a.User.name,
+        email: a.User.email,
+        resume_url: a.resume_url || a.User.resume_url,
+        skills: readSkills(a.User)
+      } : null,
       job: a.Job ? { id: a.Job.id, title: a.Job.title } : null,
       applied_at: a.applied_at,
     })));
