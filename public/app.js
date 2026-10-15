@@ -1736,7 +1736,7 @@ async function loadConversations() {
 
     renderConversationsList();
   } catch (err) {
-    console.warn('Error loading conversations:', err);
+    if (!err.message?.includes('429')) console.warn('Error loading conversations:', err);
   }
 }
 
@@ -1952,7 +1952,7 @@ async function loadNotifications() {
       });
     });
   } catch (err) {
-    console.warn('Error loading notifications:', err);
+    if (!err.message?.includes('429')) console.warn('Error loading notifications:', err);
   }
 }
 
@@ -2136,8 +2136,9 @@ $('accountActionForm')?.addEventListener('submit', async (e) => {
   }
 });
 
-// Real-time Background Poller (every 10 seconds)
+// Real-time Background Poller (every 15s, paused when tab is inactive)
 setInterval(() => {
+  if (document.hidden) return;
   if (session().token) {
     loadNotifications();
     loadConversations();
@@ -2145,7 +2146,7 @@ setInterval(() => {
       refreshThreadMessages();
     }
   }
-}, 10000);
+}, 15000);
 
 // ---------- init ----------
 wirePasswordToggles();

@@ -58,7 +58,7 @@ exports.list = async (req, res, next) => {
       include: [
         {
           model: Job,
-          attributes: ['id', 'title', 'company', 'location', 'company_id', 'salary_min', 'salary_max', 'employment_type'],
+          attributes: ['id', 'title', 'company', 'location', 'company_id', 'employment_type', 'skills', 'created_at'],
           include: [
             {
               model: Company,
