@@ -1,6 +1,16 @@
 const { Notification } = require('../models');
 const { success } = require('../utils/response');
 
+const formatNotification = (n) => {
+  const json = n.toJSON ? n.toJSON() : n;
+  const ts = json.createdAt || json.created_at || new Date().toISOString();
+  return {
+    ...json,
+    created_at: ts,
+    createdAt: ts
+  };
+};
+
 exports.list = async (req, res, next) => {
   try {
     const isCompany = req.account.role === 'company';
@@ -14,7 +24,7 @@ exports.list = async (req, res, next) => {
       where: { ...where, is_read: false },
     });
     return success(res, 'Notifications retrieved successfully', {
-      notifications,
+      notifications: notifications.map(formatNotification),
       unread_count: unreadCount,
     });
   } catch (error) { next(error); }

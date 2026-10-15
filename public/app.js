@@ -38,6 +38,7 @@ let currentAppTab = 'all';
 function timeAgo(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   const now = new Date();
   const diffSec = Math.floor((now - date) / 1000);
   if (diffSec < 60) return 'Just now';
@@ -49,6 +50,20 @@ function timeAgo(dateString) {
   if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
+function formatChatTime(dateString) {
+  if (!dateString) return 'Just now';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return 'Just now';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return timeStr;
+  const isThisYear = d.getFullYear() === now.getFullYear();
+  const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(isThisYear ? {} : { year: 'numeric' }) });
+  return `${dateStr}, ${timeStr}`;
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1000,6 +1015,10 @@ function renderApplicationCard(a) {
   const isArchived = a.status === 'Archived';
   const statusClass = STATUS_CLASS[a.status] || 'applied';
   const resumeLabel = a.resume_type === 'custom' ? 'Custom Uploaded Resume' : '🌟 HireFlow Profile Resume';
+  const appDate = a.applied_at || a.createdAt;
+  const appDateStr = (appDate && !isNaN(new Date(appDate).getTime()))
+    ? new Date(appDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : 'Recently';
 
   return `
     <div class="app-item-card" data-app-id="${a.id}">
@@ -1016,7 +1035,7 @@ function renderApplicationCard(a) {
       </div>
 
       <div class="app-details-row">
-        <span>📅 Applied: <strong>${new Date(a.applied_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong></span>
+        <span>📅 Applied: <strong>${appDateStr}</strong></span>
         <span>📄 Resume: ${a.resume_url ? `<a href="${a.resume_url}" target="_blank"><u>${resumeLabel}</u></a>` : `<span>${resumeLabel}</span>`}</span>
         ${a.note ? `<span class="span-all muted">💬 Note: ${escapeHtml(a.note)}</span>` : ''}
       </div>
@@ -1513,8 +1532,10 @@ function companyJobCard(j) {
   const skillBadges = skills.slice(0, 4).map((s) => `<span class="skill-tag">${s}</span>`).join('');
   const extraSkills = skills.length > 4 ? `<span class="pill">+${skills.length - 4}</span>` : '';
   const appCount = j.applications_count || 0;
-  const appBadgeClass = appCount > 0 ? 'good' : 'warn';
-  const postedDate = j.created_at ? new Date(j.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  const rawDate = j.createdAt || j.created_at;
+  const postedDate = (rawDate && !isNaN(new Date(rawDate).getTime()))
+    ? new Date(rawDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
 
   return `
     <div class="card job-card company-card">
@@ -1635,7 +1656,10 @@ function renderCompanyApps() {
   const rows = coAppsCache.filter((a) => (!jf || a.job?.id === jf) && (!sf || a.status === sf));
   $('companyAppsList').innerHTML = rows.length ? rows.map((a) => {
     const resumeLabel = a.resume_type === 'custom' ? 'Custom Uploaded Resume' : '🌟 HireFlow Profile Resume';
-    const skills = skillList(a.candidate?.skills);
+    const appDate = a.applied_at || a.createdAt;
+    const appDateStr = (appDate && !isNaN(new Date(appDate).getTime()))
+      ? new Date(appDate).toLocaleString()
+      : 'Recently';
     return `
       <div class="card">
         <div class="card-top">
@@ -1645,7 +1669,7 @@ function renderCompanyApps() {
           </div>
           <span class="pill ${STATUS_CLASS[a.status] || ''}">${a.status}</span>
         </div>
-        <div class="muted mt-2">Applied for <b>${escapeHtml(a.job?.title || '')}</b> • ${new Date(a.applied_at).toLocaleString()}</div>
+        <div class="muted mt-2">Applied for <b>${escapeHtml(a.job?.title || '')}</b> • ${appDateStr}</div>
         ${a.note ? `<div class="mt-2 font-xs muted"><b>Note:</b> ${escapeHtml(a.note)}</div>` : ''}
         ${skills.length ? `<div class="card-skills mt-2">${skills.slice(0, 6).map((s) => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}</div>` : ''}
         <div class="card-footer mt-3">
@@ -1841,7 +1865,8 @@ async function refreshThreadMessages() {
 
     bodyEl.innerHTML = messages.map((m) => {
       const isOutgoing = m.sender_type === role;
-      const timeStr = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const rawDate = m.createdAt || m.created_at;
+      const timeStr = formatChatTime(rawDate);
       return `
         <div class="chat-msg-row ${isOutgoing ? 'outgoing' : 'incoming'}">
           <div class="chat-bubble">${escapeHtml(m.content)}</div>
@@ -1932,7 +1957,7 @@ async function loadNotifications() {
           <div class="notif-content">
             <div class="notif-title">${escapeHtml(n.title)}</div>
             <div class="notif-desc">${escapeHtml(n.message)}</div>
-            <div class="notif-time">${timeAgo(n.created_at)}</div>
+            <div class="notif-time">${timeAgo(n.createdAt || n.created_at)}</div>
           </div>
         </div>`;
     }).join('');

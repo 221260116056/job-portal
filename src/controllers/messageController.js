@@ -2,6 +2,16 @@ const { Op } = require('sequelize');
 const { Message, User, Company, Job, Notification } = require('../models');
 const { success } = require('../utils/response');
 
+const formatMessage = (msg) => {
+  const json = msg.toJSON ? msg.toJSON() : msg;
+  const ts = json.createdAt || json.created_at || new Date().toISOString();
+  return {
+    ...json,
+    created_at: ts,
+    createdAt: ts
+  };
+};
+
 exports.getConversations = async (req, res, next) => {
   try {
     const myId = req.account.id;
@@ -29,7 +39,7 @@ exports.getConversations = async (req, res, next) => {
           otherId,
           otherType,
           lastMessage: msg.content,
-          lastMessageAt: msg.created_at,
+          lastMessageAt: msg.createdAt || msg.created_at,
           unreadCount: 0,
           job: msg.Job ? { id: msg.Job.id, title: msg.Job.title } : null,
           party: null
@@ -96,7 +106,7 @@ exports.getThread = async (req, res, next) => {
     }
 
     return success(res, 'Messages retrieved successfully', {
-      messages,
+      messages: messages.map(formatMessage),
       otherParty
     });
   } catch (error) { next(error); }
@@ -136,6 +146,6 @@ exports.sendMessage = async (req, res, next) => {
     }
     await Notification.create(notifData).catch(() => {});
 
-    return success(res, 'Message sent successfully', message, 201);
+    return success(res, 'Message sent successfully', formatMessage(message), 201);
   } catch (error) { next(error); }
 };
