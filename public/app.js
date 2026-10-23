@@ -1,9 +1,10 @@
-// Session: { token, role: 'candidate' | 'company', email, name }
+// Session: { token, role: 'candidate' | 'company', email, name, avatar }
 const session = () => ({
   token: localStorage.getItem('token'),
   role: localStorage.getItem('role'),
   email: localStorage.getItem('email'),
   name: localStorage.getItem('name'),
+  avatar: localStorage.getItem('avatar'),
 });
 const isCandidate = () => session().token && session().role === 'candidate';
 const isCompany = () => session().token && session().role === 'company';
@@ -100,9 +101,17 @@ function renderNav() {
     if (token) {
       const isComp = role === 'company';
       const displayName = name || email || (isComp ? 'Company' : 'Candidate');
-      if ($('userAvatarBadge')) $('userAvatarBadge').textContent = isComp ? '🏢' : '👤';
+      if ($('userAvatarBadge')) {
+        $('userAvatarBadge').innerHTML = session().avatar
+          ? `<img src="${escapeHtml(session().avatar)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="Avatar" />`
+          : (isComp ? '🏢' : '👤');
+      }
       if ($('userNameLabel')) $('userNameLabel').textContent = displayName;
-      if ($('userMenuAvatar')) $('userMenuAvatar').textContent = isComp ? '🏢' : '👤';
+      if ($('userMenuAvatar')) {
+        $('userMenuAvatar').innerHTML = session().avatar
+          ? `<img src="${escapeHtml(session().avatar)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="Avatar" />`
+          : (isComp ? '🏢' : '👤');
+      }
       if ($('userMenuName')) $('userMenuName').textContent = displayName;
       if ($('userMenuEmail')) $('userMenuEmail').textContent = email || '';
       if ($('userMenuRoleBadge')) $('userMenuRoleBadge').textContent = isComp ? 'Company Partner' : 'Verified Candidate';
@@ -188,7 +197,7 @@ document.addEventListener('click', (e) => {
   if (!$('mobileMenu')?.classList.contains('hidden') && !$('mobileMenu')?.contains(e.target) && e.target !== $('menuBtn')) closeMobileMenu();
 });
 $('logoutBtn')?.addEventListener('click', () => {
-  ['token', 'role', 'email', 'name'].forEach((k) => localStorage.removeItem(k));
+  ['token', 'role', 'email', 'name', 'avatar'].forEach((k) => localStorage.removeItem(k));
   savedJobIdsSet.clear();
   cachedApplications = [];
   cachedSavedJobs = [];
@@ -198,11 +207,13 @@ $('logoutBtn')?.addEventListener('click', () => {
   toast('Logged out successfully');
   location.hash = '#/jobs';
 });
-function loginAs({ token, role, email, name }) {
+function loginAs({ token, role, email, name, avatar }) {
   localStorage.setItem('token', token);
   localStorage.setItem('role', role);
   localStorage.setItem('email', email || '');
   localStorage.setItem('name', name || '');
+  if (avatar) localStorage.setItem('avatar', avatar);
+  else localStorage.removeItem('avatar');
   renderNav();
 }
 
@@ -210,8 +221,28 @@ function loginAs({ token, role, email, name }) {
 const CANDIDATE_ONLY = ['dashboard', 'my-applications', 'profile'];
 const COMPANY_ONLY = ['company/dashboard', 'company/jobs', 'company/jobs/create', 'company/applications'];
 function route() {
-  let h = (location.hash || '#/jobs').replace(/^#\//, '');
+  let rawHash = location.hash || '#/jobs';
+  let h = rawHash.replace(/^#\//, '');
+  if (h.includes('?')) h = h.split('?')[0];
   if (h.startsWith('company/jobs/') && h.endsWith('/edit')) h = 'company/jobs/edit';
+
+  // Check URL query parameters for oauth triggers or error messages
+  const queryStr = location.search.replace(/^\?/, '') || (rawHash.includes('?') ? rawHash.split('?')[1] : '');
+  if (queryStr) {
+    const qParams = new URLSearchParams(queryStr);
+    if (qParams.get('oauth_modal')) {
+      setTimeout(() => openOAuthModal(qParams.get('oauth_modal'), qParams.get('role') || 'candidate'), 100);
+    }
+    if (qParams.get('error')) {
+      toast(decodeURIComponent(qParams.get('error')));
+    }
+  }
+
+  if (h === 'oauth-callback' || location.pathname === '/oauth-callback') {
+    handleOAuthCallback();
+    return;
+  }
+
   const viewMap = {
     dashboard: 'view-dashboard', jobs: 'view-jobs', login: 'view-login', register: 'view-register',
     'my-applications': 'view-my-applications', profile: 'view-profile',
@@ -219,8 +250,9 @@ function route() {
     'company/dashboard': 'view-company-dashboard', 'company/jobs': 'view-company-jobs',
     'company/jobs/create': 'view-company-job-form', 'company/jobs/edit': 'view-company-job-form',
     'company/applications': 'view-company-applications',
+    'oauth-callback': 'view-oauth-callback'
   };
-  const pathMap = { '/login': 'login', '/register': 'register', '/jobs': 'jobs', '/dashboard': 'dashboard', '/my-applications': 'my-applications', '/profile': 'profile', '/company/login': 'company/login', '/company/register': 'company/register', '/company/dashboard': 'company/dashboard', '/company/jobs': 'company/jobs', '/company/jobs/create': 'company/jobs/create', '/company/applications': 'company/applications' };
+  const pathMap = { '/login': 'login', '/register': 'register', '/jobs': 'jobs', '/dashboard': 'dashboard', '/my-applications': 'my-applications', '/profile': 'profile', '/company/login': 'company/login', '/company/register': 'company/register', '/company/dashboard': 'company/dashboard', '/company/jobs': 'company/jobs', '/company/jobs/create': 'company/jobs/create', '/company/applications': 'company/applications', '/oauth-callback': 'oauth-callback' };
   if (!location.hash && pathMap[location.pathname]) {
     location.hash = '#/' + pathMap[location.pathname];
     return;
@@ -1194,6 +1226,17 @@ async function loadProfile() {
     if ($('profileEmailInput')) $('profileEmailInput').value = res.data.email || '';
     if ($('profileSkillsBox')) $('profileSkillsBox').innerHTML = tags;
     if ($('resumeLink')) $('resumeLink').innerHTML = res.data.resume_url ? `<p><a href="${res.data.resume_url}" target="_blank">View current resume</a></p>` : '<span class="muted">No resume uploaded yet</span>';
+    
+    if ($('profileOAuthStatus')) {
+      const p = res.data.auth_provider;
+      if (p === 'google') {
+        $('profileOAuthStatus').innerHTML = '<span class="oauth-badge-pill">Connected with Google 🟢</span>';
+      } else if (p === 'linkedin') {
+        $('profileOAuthStatus').innerHTML = '<span class="oauth-badge-pill">Connected with LinkedIn 🟢</span>';
+      } else {
+        $('profileOAuthStatus').innerHTML = '<span class="muted font-xs">Standard Password Account</span>';
+      }
+    }
   } catch (err) { toast(err.message); }
 }
 
@@ -2173,9 +2216,146 @@ setInterval(() => {
   }
 }, 15000);
 
+// ==========================================================================
+// Google & LinkedIn OAuth Logic
+// ==========================================================================
+const GOOGLE_SVG = `<svg class="oauth-icon" viewBox="0 0 24 24" width="22" height="22"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>`;
+const LINKEDIN_SVG = `<svg class="oauth-icon" viewBox="0 0 24 24" width="22" height="22"><path fill="#0A66C2" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451c.979 0 1.778-.773 1.778-1.729V1.73C24 .774 23.205 0 22.225 0z"/></svg>`;
+
+let oauthStatus = { googleConfigured: false, linkedinConfigured: false, googleClientId: null };
+let activeOAuthProvider = 'google';
+let activeOAuthRole = 'candidate';
+
+async function fetchOAuthStatus() {
+  try {
+    const res = await api('/api/auth/oauth/status');
+    if (res.data) oauthStatus = res.data;
+  } catch (_) {}
+}
+
+function openOAuthModal(provider = 'google', role = 'candidate') {
+  activeOAuthProvider = provider;
+  activeOAuthRole = role;
+  const isG = provider === 'google';
+
+  if ($('oauthProviderIcon')) $('oauthProviderIcon').innerHTML = isG ? GOOGLE_SVG : LINKEDIN_SVG;
+  if ($('oauthModalTitle')) $('oauthModalTitle').textContent = `Continue with ${isG ? 'Google' : 'LinkedIn'}`;
+  if ($('oauthModalSubtitle')) $('oauthModalSubtitle').textContent = role === 'company' ? 'Company Recruiter Single Sign-On' : 'Candidate Single Sign-On';
+
+  const isConfigured = isG ? oauthStatus.googleConfigured : oauthStatus.linkedinConfigured;
+  const banner = $('oauthConfiguredNotice');
+  if (banner) banner.classList.toggle('hidden', !isConfigured);
+
+  if ($('oauthQuickName')) $('oauthQuickName').textContent = 'Vraj Vekariya';
+  if ($('oauthQuickEmail')) $('oauthQuickEmail').textContent = isG ? 'vraj.vekariya@gmail.com' : 'vraj.vekariya@linkedin.com';
+  if ($('oauthQuickAvatar')) $('oauthQuickAvatar').textContent = 'V';
+
+  $('oauthModal')?.classList.remove('hidden');
+}
+
+function closeOAuthModal() {
+  $('oauthModal')?.classList.add('hidden');
+}
+
+async function quickConnectOAuth(name, email) {
+  try {
+    const res = await api('/api/auth/oauth/quick-connect', {
+      method: 'POST',
+      body: JSON.stringify({
+        provider: activeOAuthProvider,
+        name,
+        email,
+        role: activeOAuthRole
+      })
+    });
+    loginAs({
+      token: res.data.token,
+      role: res.data.role,
+      email: res.data.user.email,
+      name: res.data.user.name,
+      avatar: res.data.user.avatar_url
+    });
+    closeOAuthModal();
+    const providerLabel = activeOAuthProvider === 'linkedin' ? 'LinkedIn' : 'Google';
+    toast(`Welcome, ${res.data.user.name}! Connected via ${providerLabel}.`);
+    location.hash = res.data.role === 'company' ? '#/company/dashboard' : '#/dashboard';
+  } catch (err) {
+    toast('OAuth error: ' + err.message);
+  }
+}
+
+function handleOAuthCallback() {
+  document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+  $('view-oauth-callback')?.classList.add('active');
+
+  const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+  const searchPart = window.location.search.replace(/^\?/, '');
+  const params = new URLSearchParams(hashPart || searchPart);
+
+  const token = params.get('token');
+  const role = params.get('role') || 'candidate';
+  const name = params.get('name') || '';
+  const email = params.get('email') || '';
+  const avatar = params.get('avatar') || '';
+  const provider = params.get('provider') || 'OAuth';
+  const error = params.get('error');
+
+  if (error) {
+    toast(`Sign-in failed: ${decodeURIComponent(error)}`);
+    setTimeout(() => { location.hash = '#/login'; }, 800);
+    return;
+  }
+
+  if (token) {
+    loginAs({ token, role, email, name, avatar });
+    const providerLabel = provider === 'linkedin' ? 'LinkedIn' : provider === 'google' ? 'Google' : 'SSO';
+    toast(`Welcome, ${name || 'User'}! Successfully signed in with ${providerLabel}.`);
+    setTimeout(() => {
+      location.hash = role === 'company' ? '#/company/dashboard' : '#/dashboard';
+    }, 500);
+  } else {
+    toast('No authentication token received');
+    location.hash = '#/login';
+  }
+}
+
+// Global OAuth click delegator
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-oauth]');
+  if (!btn) return;
+  const provider = btn.dataset.oauth;
+  const role = btn.dataset.oauthRole || (isCompany() ? 'company' : 'candidate');
+  const isConfigured = provider === 'google' ? oauthStatus.googleConfigured : oauthStatus.linkedinConfigured;
+
+  if (isConfigured) {
+    window.location.href = `/api/auth/${provider}?role=${role}`;
+  } else {
+    openOAuthModal(provider, role);
+  }
+});
+
+$('oauthModalClose')?.addEventListener('click', closeOAuthModal);
+$('oauthModal')?.addEventListener('click', (e) => {
+  if (e.target === $('oauthModal')) closeOAuthModal();
+});
+
+$('oauthQuickProfileBtn')?.addEventListener('click', () => {
+  const name = $('oauthQuickName')?.textContent || 'Vraj Vekariya';
+  const email = $('oauthQuickEmail')?.textContent || 'vraj@example.com';
+  quickConnectOAuth(name, email);
+});
+
+$('oauthCustomForm')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = $('oauthCustomName')?.value.trim();
+  const email = $('oauthCustomEmail')?.value.trim();
+  if (!name || !email) return toast('Name and email are required');
+  quickConnectOAuth(name, email);
+});
+
 // ---------- init ----------
 wirePasswordToggles();
 setupVoiceSearch('jobMicBtn', 'jobKeyword', () => { page = 1; loadJobs(); });
 setupVoiceSearch('dashMicBtn', 'dashSearchKeyword', () => { renderCandidateDashboardJobs(); });
 renderNav();
-route();
+fetchOAuthStatus().then(route).catch(route);

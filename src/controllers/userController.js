@@ -27,6 +27,10 @@ const publicUser = (user) => ({
   resume_url: user.resume_url,
   skills: readSkills(user),
   resume_data: user.resume_data || {},
+  auth_provider: user.auth_provider || 'local',
+  avatar_url: user.avatar_url || null,
+  google_id: user.google_id || null,
+  linkedin_id: user.linkedin_id || null
 });
 
 exports.me = (req, res) => success(res, 'Current user retrieved successfully', publicUser(req.user));

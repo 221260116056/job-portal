@@ -1518,3 +1518,217 @@ select { background:#0f172a; color:var(--text); border:1px solid var(--line); bo
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 6px;
 }
+
+/* ==========================================================================
+   OAuth Buttons, Divider, and Modal Styles
+   ========================================================================== */
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.25rem 0 0.9rem;
+}
+.oauth-divider::before,
+.oauth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.oauth-divider span {
+  padding: 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.oauth-btn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.btn-oauth {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f1f5f9;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+.btn-oauth:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.btn-google:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(66, 133, 244, 0.55);
+}
+.btn-linkedin:hover {
+  background: rgba(10, 102, 194, 0.16);
+  border-color: rgba(10, 102, 194, 0.65);
+}
+.oauth-icon {
+  flex-shrink: 0;
+  display: block;
+}
+
+/* OAuth Modal */
+.oauth-modal-card {
+  max-width: 480px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(99, 102, 241, 0.15);
+}
+.oauth-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.oauth-provider-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+.oauth-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+.oauth-account-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+.oauth-account-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+}
+.oauth-acc-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #3b82f6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.oauth-acc-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.oauth-acc-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.oauth-acc-action {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #818cf8;
+}
+.oauth-custom-details {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+}
+.oauth-custom-details summary {
+  cursor: pointer;
+  padding: 0.2rem 0;
+  user-select: none;
+}
+.oauth-guide-box details {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+}
+.oauth-guide-box summary {
+  cursor: pointer;
+  user-select: none;
+}
+.oauth-guide-content {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.oauth-guide-content pre {
+  background: #0f172a;
+  padding: 0.6rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #38bdf8;
+  font-family: monospace;
+  font-size: 0.76rem;
+}
+.oauth-spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: oauthSpin 0.9s linear infinite;
+  margin: 0 auto;
+}
+@keyframes oauthSpin {
+  to { transform: rotate(360deg); }
+}
+.oauth-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.oauth-banner.good {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+.oauth-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+}
+

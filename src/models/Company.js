@@ -8,7 +8,11 @@ const Company = sequelize.define('Company', {
   password: { type: DataTypes.STRING, allowNull: false },
   location: { type: DataTypes.STRING(180), allowNull: false },
   website: { type: DataTypes.STRING(255), allowNull: true },
-  is_suspended: { type: DataTypes.BOOLEAN, defaultValue: false, allowNull: false }
+  is_suspended: { type: DataTypes.BOOLEAN, defaultValue: false, allowNull: false },
+  google_id: { type: DataTypes.STRING(255), allowNull: true },
+  linkedin_id: { type: DataTypes.STRING(255), allowNull: true },
+  avatar_url: { type: DataTypes.STRING(500), allowNull: true },
+  auth_provider: { type: DataTypes.STRING(50), defaultValue: 'local', allowNull: false }
 }, { tableName: 'companies', underscored: true, defaultScope: { attributes: { exclude: ['password'] } } });
 
 module.exports = Company;

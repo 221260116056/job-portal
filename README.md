@@ -31,6 +31,7 @@
 - **💬 In-App Messaging**: Initiate or reply to candidate messages straight from the applicant card.
 
 ### 🛡️ Platform & UX Polish
+- **🔑 Google & LinkedIn OAuth 2.0**: 1-click Single Sign-On with Google and LinkedIn for candidates and company recruiters.
 - **Modern Glassmorphic UI**: Sleek dark theme with micro-animations and responsive mobile navigation.
 - **Security & Privacy**: Role-guarded JWT authentication, bcrypt password hashing, and rate limiting.
 - **Account Control**: Update your profile, change passwords (with eye show/hide toggle), or temporarily suspend/delete your account.
@@ -45,7 +46,7 @@
 | **Backend** | Node.js, Express.js (REST API) |
 | **Database** | PostgreSQL, Sequelize ORM |
 | **Resume Extraction** | `pdf-parse`, `mammoth` (DOCX), Custom Skill Extractor |
-| **Authentication** | JWT (JSON Web Tokens), `bcryptjs` |
+| **Authentication** | Google OAuth 2.0, LinkedIn OAuth 2.0 (OpenID Connect), JWT, `bcryptjs` |
 | **File Storage** | Multer |
 
 ---
@@ -74,6 +75,13 @@ JWT_SECRET=your_super_secret_jwt_key
 JWT_EXPIRES_IN=7d
 UPLOAD_DIR=uploads/resumes
 MIN_JOB_MATCH_PERCENTAGE=30
+APP_URL=http://localhost:5000
+
+# Optional Google & LinkedIn OAuth 2.0 Credentials
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+LINKEDIN_CLIENT_ID=
+LINKEDIN_CLIENT_SECRET=
 ```
 
 ### 4. Seed sample data *(optional)*

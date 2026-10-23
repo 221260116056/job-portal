@@ -10,6 +10,10 @@ const publicCompany = (company) => ({
   email: company.email,
   location: company.location,
   website: company.website,
+  auth_provider: company.auth_provider || 'local',
+  avatar_url: company.avatar_url || null,
+  google_id: company.google_id || null,
+  linkedin_id: company.linkedin_id || null
 });
 
 exports.register = async (req, res, next) => {

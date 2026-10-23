@@ -50,7 +50,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/saved-jobs', savedJobRoutes);
 // Frontend deep routes serve the SPA (hash router renders the right view).
 const frontendEntry = path.resolve(process.cwd(), 'public', 'index.html');
-app.get(['/login', '/register', '/jobs', '/my-applications', '/profile', '/chat', '/saved-jobs', '/notifications'], (req, res) => res.sendFile(frontendEntry));
+app.get(['/login', '/register', '/jobs', '/my-applications', '/profile', '/chat', '/saved-jobs', '/notifications', '/oauth-callback'], (req, res) => res.sendFile(frontendEntry));
 app.get('/company/*', (req, res) => res.sendFile(frontendEntry));
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 app.use(errorMiddleware);

@@ -10,7 +10,11 @@ const User = sequelize.define('User', {
   skills: { type: DataTypes.JSONB, allowNull: true, defaultValue: [] },
   resume_text: { type: DataTypes.TEXT, allowNull: true },
   resume_data: { type: DataTypes.JSONB, allowNull: true, defaultValue: {} },
-  is_suspended: { type: DataTypes.BOOLEAN, defaultValue: false, allowNull: false }
+  is_suspended: { type: DataTypes.BOOLEAN, defaultValue: false, allowNull: false },
+  google_id: { type: DataTypes.STRING(255), allowNull: true },
+  linkedin_id: { type: DataTypes.STRING(255), allowNull: true },
+  avatar_url: { type: DataTypes.STRING(500), allowNull: true },
+  auth_provider: { type: DataTypes.STRING(50), defaultValue: 'local', allowNull: false }
 }, { tableName: 'users', underscored: true, defaultScope: { attributes: { exclude: ['password'] } } });
 
 module.exports = User;
